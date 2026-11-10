@@ -140,7 +140,7 @@ details a { color: var(--ink); }
   </section>
   <section>
     <label class="tog"><input type="checkbox" id="tBase" checked> Background map</label>
-    <div class="opac" id="opacRow"><label for="opac">Color strength</label><input type="range" id="opac" min="15" max="100" step="5" value="60"><output id="opacOut" for="opac">60%</output></div>
+    <div class="opac" id="opacRow"><label for="opac">Color strength</label><input type="range" id="opac" min="15" max="100" step="5" value="55"><output id="opacOut" for="opac">55%</output></div>
     <label class="tog" id="censusRow"><input type="checkbox" id="tCensus" checked> Census rent where Zillow has none <small id="nCensus"></small></label>
     <label class="tog"><input type="checkbox" id="tCity" checked> City names</label>
     <label class="tog"><input type="checkbox" id="tState" checked> State lines</label>
@@ -161,7 +161,7 @@ details a { color: var(--ink); }
       <p><strong>Monthly rent</strong> is the Zillow Observed Rent Index (ZORI) for September 2026 where Zillow publishes one (8,333 ZIP codes, mostly cities and suburbs): the typical asking rent for listed homes and apartments, smoothed. Where Zillow has no rent, the map shows (striped) the Census Bureau's median gross rent from the American Community Survey 2020–2024 5-year estimates, table B25064: what renters actually paid, averaged over 2020–2024, including utilities. Census rents run well below Zillow asking rents because they include long-time tenants, so compare striped ZIPs with each other, not with solid ones. Census caps its figure at $3,500 ("$3,500 or more"). Each Census figure has a margin of error (90%), shown on hover.</p>
       <p><strong>Census tracts</strong> (the second area choice) show median home value (table B25077: owners' own estimates of what their home would sell for) and median gross rent (B25064), American Community Survey 2020–2024 5-year estimates, with 90% margins of error on hover, on 2022 cartographic tract boundaries (2020 tracts). They are a different source and time period from the Zillow ZIP figures and run lower. Census caps values at $2,000,000 and rents at $3,500.</p>
       <p><strong>Areas</strong> are the Census Bureau's 2020 ZIP Code Tabulation Areas, which approximate ZIP codes; PO-box-only ZIPs have no area. Zillow ZIPs are matched by their 5-digit code (7 Zillow value ZIPs and 4 rent ZIPs have no 2020 area and are left out). Grey areas have no estimate.</p>
-      <p><strong>Street map</strong> (this website version): OpenFreeMap's Positron style, built from OpenStreetMap data (© OpenStreetMap contributors, OpenMapTiles). The colors sit on it see-through, below its roads and names. The text below describes the simpler background used when the map runs inside claude.ai.</p>
+      <p><strong>Street map</strong> (this website version): OpenFreeMap's Liberty style, built from OpenStreetMap data (© OpenStreetMap contributors, OpenMapTiles). The colors sit on it see-through, below its roads and names. The text below describes the simpler background used when the map runs inside claude.ai.</p>
       <p><strong>Background map</strong>: land is the Census Bureau's 2020 state boundaries (1:500,000, clipped to the shoreline); lakes and rivers are Natural Earth 1:10m (public domain); highways and major roads are Census TIGER roads (interstates, US and state highways, county roads), simplified. It shows major roads only, not every street. Town names are Zillow's city list placed with the Census 2024 Gazetteer.</p>
       <p>Data downloaded November 9, 2026: Zillow Research public data (files.zillowstatic.com), Census ACS summary file (www2.census.gov), 2020 cartographic boundaries and the 2024 Gazetteer of places. Zillow data © Zillow, used under its research data terms.</p>
     </details>
@@ -192,7 +192,7 @@ const rentFilter = () => document.getElementById('tCensus').checked ? null : ['=
 const map = new maplibregl.Map({
   container: 'map', attributionControl: false, dragRotate: false, pitchWithRotate: false, minZoom: 2.5, maxZoom: 13,
   bounds: [[-125, 24.3], [-66.5, 49.5]], fitBoundsOptions: { padding: { left: innerWidth > 720 ? 390 : 20, right: 20, top: 20, bottom: innerWidth > 720 ? 20 : innerHeight * 0.46 } },
-  style: 'https://tiles.openfreemap.org/styles/positron'
+  style: 'https://tiles.openfreemap.org/styles/liberty'
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Zillow Research (ZHVI, ZORI) · US Census Bureau (ACS 2020–2024, 2020 ZCTAs)' }), 'bottom-right');
@@ -589,18 +589,19 @@ document.getElementById('search').addEventListener('submit', ev => {
 const WEB = true; let STREET = [];
 function addWebBase() {
   STREET = map.getStyle().layers.map(l => l.id).filter(id => !['states-fill', 'states-line'].includes(id));
-  // the ZIP / tract colors go over land, water, buildings and roads (see-through), below road and place names
-  const anchor = map.getLayer('waterway_line_label') ? 'waterway_line_label' : STREET.find(id => map.getLayer(id).type === 'symbol');
+  // the ZIP / tract colors tint the land and parks; water, roads, buildings and names draw on top of them
+  const anchor = map.getLayer('waterway_tunnel') ? 'waterway_tunnel' : STREET.find(id => map.getLayer(id).type === 'symbol');
   map.addLayer({ id: 'base-over', type: 'background', layout: { visibility: 'none' }, paint: { 'background-opacity': 0 } }, anchor);
   map.addLayer({ id: 'base-anchor', type: 'background', layout: { visibility: 'none' }, paint: { 'background-opacity': 0 } }, 'base-over');
   map.moveLayer('states-fill', STREET[1]);
+  for (const b of ['building', 'building-3d']) if (map.getLayer(b)) map.moveLayer(b, 'base-anchor');   // buildings take the tint; roads, water and names stay on top
 }
 function loadRoads() {}
 function applyBase() {
   const on = baseOn();
   for (const id of STREET) if (map.getLayer(id)) {
     const v = on && !(id.startsWith('label_') && !document.getElementById('tCity').checked) ? 'visible' : 'none';
-    if (id === 'background') { map.setPaintProperty(id, 'background-color', on ? '#f2f3f0' : '#11151d'); continue; }
+    if (id === 'background') { map.setPaintProperty(id, 'background-color', on ? '#f8f4f0' : '#11151d'); continue; }
     map.setLayoutProperty(id, 'visibility', v);
   }
   if (map.getLayer('states-fill')) map.setLayoutProperty('states-fill', 'visibility', on ? 'none' : 'visible');
