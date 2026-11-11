@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US Home Values &amp; Rents</title>
-<meta name="description" content="US home values and rents by ZIP code and Census tract, on an OpenStreetMap street map.">
+<meta name="description" content="US home values, rents, income, race, commuting and crime, by ZIP code, Census tract and block group, on an OpenStreetMap street map.">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@500;700;800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
@@ -43,13 +43,15 @@ h1 span { color: var(--apricot); }
 .lede { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
 .lede strong { color: var(--ink); font-weight: 600; }
 
-.views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 6px; border-bottom: 1px solid var(--rule); }
-.views button { all: unset; text-align: center; font: 600 13px/1 var(--f-body); color: var(--muted); padding: 10px 4px; border-radius: 999px; cursor: pointer; }
+.views { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 6px; border-bottom: 1px solid var(--rule); }
+.views button { all: unset; text-align: center; font: 600 12px/1 var(--f-body); color: var(--muted); padding: 10px 2px; border-radius: 999px; cursor: pointer; }
 .views button:hover { color: var(--ink); background: rgba(255,255,255,.05); }
 .views button[aria-pressed="true"] { background: var(--apricot); color: var(--ground); }
 .views button:focus-visible { outline: 2px solid var(--apricot); outline-offset: 2px; }
 [hidden] { display: none !important; }
 .seg.seg3 { grid-template-columns: 1fr 1fr 1fr; }
+.seg.seg5 { grid-template-columns: repeat(5, 1fr); border-radius: 14px; }
+.seg.seg5 button { font-size: 11px; padding: 7px 1px; line-height: 1.15; border-radius: 11px; }
 .seg.seg3 button { font-size: 11.5px; padding: 6px 0; }
 .seg3 small { display: block; margin: 2px 0 0; }
 .race { display: grid; gap: 6px; }
@@ -132,7 +134,7 @@ details a { color: var(--ink); }
 <div id="map" role="region" aria-label="Map of US ZIP codes colored by home value or rent"></div>
 <aside class="panel" aria-label="Map controls">
   <div class="views" role="group" aria-label="Map">
-    <button type="button" id="vPrice" aria-pressed="true">Home prices</button><button type="button" id="vIncome" aria-pressed="false">Income</button><button type="button" id="vRace" aria-pressed="false">Race</button>
+    <button type="button" id="vPrice" aria-pressed="true">Prices</button><button type="button" id="vIncome" aria-pressed="false">Income</button><button type="button" id="vRace" aria-pressed="false">Race</button><button type="button" id="vCommute" aria-pressed="false">Commute</button><button type="button" id="vCrime" aria-pressed="false">Crime</button>
   </div>
   <section>
     <div class="eyebrow" id="eyebrow">United States, by ZIP code</div>
@@ -141,6 +143,17 @@ details a { color: var(--ink); }
     <div class="seg" role="group" aria-label="Measure" id="measureSeg">
       <button type="button" id="mValue" aria-pressed="true">Home value</button>
       <button type="button" id="mRent" aria-pressed="false">Monthly rent</button>
+    </div>
+    <div class="seg seg-sm seg5" role="group" aria-label="Way to work" id="commuteSeg" hidden>
+      <button type="button" id="cDA" aria-pressed="true">Drive alone</button>
+      <button type="button" id="cCP" aria-pressed="false">Carpool</button>
+      <button type="button" id="cTR" aria-pressed="false">Transit</button>
+      <button type="button" id="cWB" aria-pressed="false">Walk, bike</button>
+      <button type="button" id="cWH" aria-pressed="false">At home</button>
+    </div>
+    <div class="seg" role="group" aria-label="Crime type" id="crimeSeg" hidden>
+      <button type="button" id="mViolent" aria-pressed="true">Violent crime</button>
+      <button type="button" id="mProperty" aria-pressed="false">Property crime</button>
     </div>
     <div class="seg seg-sm seg3" role="group" aria-label="Areas" id="areaSeg">
       <button type="button" id="dBg" aria-pressed="true">Block groups <small>Census, finest</small></button>
@@ -170,6 +183,7 @@ details a { color: var(--ink); }
   <section>
     <details>
       <summary>What's new</summary>
+      <p><strong>v9</strong>, Nov 10, 2026: two new views. Commute: the share of workers who drive alone, carpool, take transit, walk or bike, or work from home, for block groups, tracts and ZIP codes. Crime: violent and property crimes reported to the FBI in 2025 per 1,000 residents, for each city police and county sheriff area.</p>
       <p><strong>v8</strong>, Nov 10, 2026: a light / dark map style under the background-map switch (it works with the background map on or off); zoom in four levels further (to street level); the color-strength slider also fades the roads drawn over the colors (stronger colors, fainter roads); race dots resized so each covers a fixed patch of ground: they no longer pile up, sparse areas look sparse and cities fill in, so the dots double as a population-density map. The map now opens on block groups with one national color scale, and the area buttons run from finest to coarsest.</p>
       <p><strong>v7</strong>, Nov 10, 2026: three views at the top: Home prices, Income (median household income) and Race (a dot map, one dot per 20 people up close); Census block groups as a third, finer set of areas; links to the building-age maps removed.</p>
       <p><strong>v6</strong>, Nov 9, 2026: light background map instead of dark, so colors stay bright and the map underneath reads; a Color strength slider sets how see-through the colors are.</p>
@@ -185,6 +199,8 @@ details a { color: var(--ink); }
       <p><strong>Monthly rent</strong> is the Zillow Observed Rent Index (ZORI) for September 2026 where Zillow publishes one (8,333 ZIP codes, mostly cities and suburbs): the typical asking rent for listed homes and apartments, smoothed. Where Zillow has no rent, the map shows (striped) the Census Bureau's median gross rent from the American Community Survey 2020–2024 5-year estimates, table B25064: what renters actually paid, averaged over 2020–2024, including utilities. Census rents run well below Zillow asking rents because they include long-time tenants, so compare striped ZIPs with each other, not with solid ones. Census caps its figure at $3,500 ("$3,500 or more"). Each Census figure has a margin of error (90%), shown on hover.</p>
       <p><strong>Income</strong> is median household income (table B19013: the yearly income of all household members, before taxes, in 2024 dollars), American Community Survey 2020–2024 5-year estimates, for ZIP Code Tabulation Areas, tracts and block groups. Census caps it at $250,000.</p>
       <p><strong>Race</strong> is table B03002 (Hispanic or Latino origin by race) for 2020 block groups, American Community Survey 2020–2024 5-year estimates. Each block group's counts become dots (one per 20 people, rounded at random so totals stay right on average), placed at random inside its land area; zoomed out, a random 1 in 5 or 1 in 25 of those dots is drawn. These are survey estimates with margins of error, and block groups are larger than the census blocks a decennial-census dot map uses, so dots in rural areas are spread over wide areas.</p>
+      <p><strong>Commute</strong> is table B08301 (means of transportation to work), American Community Survey 2020–2024 5-year estimates: how workers aged 16 and over usually got to work in the survey week, as a share of all workers. Transit includes bus, subway, rail and ferry; walk, bike combines walking and bicycling; taxi, motorcycle and other means show on hover as Other. Areas with fewer than 20 workers are grey.</p>
+      <p><strong>Crime</strong> is offenses known to law enforcement in 2025 from the FBI's Crime Data Explorer (Crime in the United States 2025, tables 8 and 10), for agencies that reported all twelve months. Violent crime is murder and nonnegligent manslaughter, rape, robbery and aggravated assault; property crime is burglary, larceny-theft and motor vehicle theft. Each city police department covers its Census city (or town or township) boundary, with the FBI's population for the rate; each county sheriff or county police department covers its county outside those city areas, with residents estimated from Census block groups. Cities that reported only part of the year are grey, as are county areas with no reporting county agency (state police, campus, transit and tribal agencies are not mapped). A city force that also patrols its county (Las Vegas Metropolitan, Charlotte-Mecklenburg) covers both. 66 city departments (1.0 million people), mostly regional departments that serve several towns, could not be matched to a boundary and are left out. These are crimes reported to police: reporting rates differ by crime and place, and per-resident rates run high wherever many visitors, workers or shoppers come in.</p>
       <p><strong>Block groups</strong> (the third area choice) are subdivisions of tracts, usually 600 to 3,000 people; values, rents and incomes come from the same Census tables as tracts, with wider margins of error. Zoomed out, tracts are shown.</p>
       <p><strong>Census tracts</strong> (the second area choice) show median home value (table B25077: owners' own estimates of what their home would sell for) and median gross rent (B25064), American Community Survey 2020–2024 5-year estimates, with 90% margins of error on hover, on 2022 cartographic tract boundaries (2020 tracts). They are a different source and time period from the Zillow ZIP figures and run lower. Census caps values at $2,000,000 and rents at $3,500.</p>
       <p><strong>Areas</strong> are the Census Bureau's 2020 ZIP Code Tabulation Areas, which approximate ZIP codes; PO-box-only ZIPs have no area. Zillow ZIPs are matched by their 5-digit code (7 Zillow value ZIPs and 4 rent ZIPs have no 2020 area and are left out). Grey areas have no estimate.</p>
@@ -211,11 +227,18 @@ const NC = RAMP.length, EXT = [0.01, 0.03];   // classes; extreme tails (share o
 const MEASURES = {
   value: { prop: 'v', breaks: [60e3, 80e3, 100e3, 150e3, 200e3, 250e3, 300e3, 375e3, 450e3, 550e3, 700e3, 900e3, 1.25e6, 1.8e6, 2.6e6], unit: '' },
   rent: { prop: 'r', breaks: [600, 700, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2300, 2700, 3200, 4000, 5000, 6500], unit: '/mo' },
-  income: { prop: 'i', breaks: [20e3, 30e3, 40e3, 50e3, 60e3, 70e3, 80e3, 90e3, 100e3, 115e3, 130e3, 150e3, 175e3, 200e3, 240e3], unit: '' }
+  income: { prop: 'i', breaks: [20e3, 30e3, 40e3, 50e3, 60e3, 70e3, 80e3, 90e3, 100e3, 115e3, 130e3, 150e3, 175e3, 200e3, 240e3], unit: '' },
+  drive: { prop: 'cda', breaks: [20, 30, 40, 50, 55, 60, 65, 70, 73, 76, 79, 82, 85, 88, 92], unit: '%', verb: 'drove to work alone', short: 'drove alone' },
+  carpool: { prop: 'ccp', breaks: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 19, 24], unit: '%', verb: 'carpooled to work', short: 'carpooled' },
+  transit: { prop: 'ctr', breaks: [0.1, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 11, 15, 20, 30, 40, 55], unit: '%', verb: 'took public transit to work', short: 'took transit' },
+  walk: { prop: 'cwb', breaks: [0.1, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 13, 18, 25, 35], unit: '%', verb: 'walked or biked to work', short: 'walked or biked' },
+  home: { prop: 'cwh', breaks: [2, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 19, 23, 28, 35], unit: '%', verb: 'worked from home', short: 'worked from home' },
+  violent: { prop: 'vr', breaks: [0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6.5, 8, 11, 15], unit: ' per 1,000' },
+  property: { prop: 'pr', breaks: [0.5, 1.5, 3, 4.5, 6, 8, 10, 12.5, 15, 18, 22, 27, 34, 45, 60], unit: ' per 1,000' }
 };
 let VIEW = 'price';
 let measure = 'value';
-const BR = { value: MEASURES.value.breaks.slice(), rent: MEASURES.rent.breaks.slice(), income: MEASURES.income.breaks.slice() };   // breaks in use (fitted to the view, or the fixed national ones)
+const BR = Object.fromEntries(Object.entries(MEASURES).map(([k, M]) => [k, M.breaks.slice()]));   // breaks in use (fitted to the view, or the fixed national ones)
 const colorExpr = m => { const M = MEASURES[m]; const e = ['step', ['get', M.prop], RAMP[0]]; BR[m].forEach((b, i) => e.push(b, RAMP[i + 1])); return ['case', ['has', M.prop], e, '#2a3040']; };
 const rentFilter = () => document.getElementById('tCensus').checked ? null : ['==', ['get', 'rs'], 'z'];
 
@@ -225,7 +248,7 @@ const map = new maplibregl.Map({
   style: 'https://tiles.openfreemap.org/styles/liberty'
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Zillow Research (ZHVI, ZORI) · US Census Bureau (ACS 2020–2024, 2020 ZCTAs)' }), 'bottom-right');
+map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Zillow Research (ZHVI, ZORI) · US Census Bureau (ACS 2020–2024, 2020 ZCTAs) · FBI Crime Data Explorer' }), 'bottom-right');
 
 const gunzipJSON = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer(); })
   .then(ab => new Response(new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip'))).json());
@@ -235,14 +258,18 @@ let DS = '', ZIPALL = null, TMETA = null; const DSDATA = {};
 const DSC = {
   zip: { pts: 'pts.wasm', coarse: 'zips.wasm', dir: 's/', one: 'ZIP', many: 'ZIPs' },
   tract: { pts: 't/pts.wasm', coarse: 't/coarse.wasm', dir: 't/s/', one: 'tract', many: 'tracts' },
-  bg: { pts: 'g/pts.wasm', coarse: 't/coarse.wasm', dir: 'g/s/', one: 'block group', many: 'block groups' }
+  bg: { pts: 'g/pts.wasm', coarse: 't/coarse.wasm', dir: 'g/s/', one: 'block group', many: 'block groups' },
+  crime: { pts: 'c/pts.wasm', coarse: 'c/coarse.wasm', dir: 'c/s/', one: 'police area', many: 'police areas', meta: 'c/meta.json' }
 };
-let GMETA = null;
+let GMETA = null, CMETA = null, PREVDS = 'bg';
 const unpackPts = (ds, pts, lv) => ({ features: pts.map(row => {
+  if (ds === 'crime') { const [z, x, y, vr, pr, kind, name, s, bb, pop, n, ag, months] = row;
+    return { properties: Object.assign({ z, name, s, t: s, kind, pop, n, ag, months }, vr != null && { vr }, pr != null && { pr }), _c: [x, y], _bb: [[bb[0], bb[1]], [bb[2], bb[3]]] }; }
+  const [w, cda, ccp, ctr, cwb, cwh, cot] = row.slice(15), cm = cda != null && { w, cda, ccp, ctr, cwb, cwh, cot };
   if (ds === 'zip') { const [z, x, y, v, r, rs, c, s, bb, t, vc, rm, rt, i, im] = row;
-    return { properties: Object.assign({ z, c, s, t }, v != null && { v }, r != null && { r, rs }, vc != null && { vc }, rm != null && { rm }, rt && { rt }, i != null && { i, im }), _c: [x, y], _bb: [[bb[0], bb[1]], [bb[2], bb[3]]] }; }
+    return { properties: Object.assign({ z, c, s, t }, v != null && { v }, r != null && { r, rs }, vc != null && { vc }, rm != null && { rm }, rt && { rt }, i != null && { i, im }, cm), _c: [x, y], _bb: [[bb[0], bb[1]], [bb[2], bb[3]]] }; }
   const [z, x, y, v, r, rs, name, s, bb, t, county, vm, rm, i, im] = row;
-  return { properties: Object.assign({ z, name, s, t, county, lv: lv || ds[0] }, v != null && { v, vm }, r != null && { r, rs, rm }, i != null && { i, im }), _c: [x, y], _bb: [[bb[0], bb[1]], [bb[2], bb[3]]] };
+  return { properties: Object.assign({ z, name, s, t, county, lv: lv || ds[0] }, v != null && { v, vm }, r != null && { r, rs, rm }, i != null && { i, im }, cm), _c: [x, y], _bb: [[bb[0], bb[1]], [bb[2], bb[3]]] };
 }) });
 const blobURL = url => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.arrayBuffer(); })
   .then(ab => new Response(new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip'))).blob()).then(b => URL.createObjectURL(b));
@@ -388,21 +415,22 @@ function addAreaLayers(coarseURL) {
 let GPRE = null;
 async function setDataset(ds, interim) {
   if (ds === DS) return;
+  if (ds !== 'crime' && DS === 'crime' && VIEW === 'crime') return;      // an area button pressed while the crime view is up: keep it for later
   if (!interim) {
   document.getElementById('dZip').setAttribute('aria-pressed', String(ds === 'zip'));
   document.getElementById('dTract').setAttribute('aria-pressed', String(ds === 'tract'));
   document.getElementById('dBg').setAttribute('aria-pressed', String(ds === 'bg'));
   }
-  const ld = document.getElementById('loading'); ld.textContent = 'Loading ' + (ds === 'zip' ? 'ZIP codes' : ds === 'tract' ? 'Census tracts' : 'block groups') + '…'; ld.hidden = false;
+  const ld = document.getElementById('loading'); ld.textContent = 'Loading ' + (ds === 'zip' ? 'ZIP codes' : ds === 'tract' ? 'Census tracts' : ds === 'crime' ? 'police areas' : 'block groups') + '…'; ld.hidden = false;
   if (!DSDATA[ds] || !DSDATA[ds + 'Coarse']) {
     if (ds === 'bg' && !DSDATA.tract) {                     // block groups need the tract shapes and numbers for the zoomed-out view
       const [tp, tc, tm] = await Promise.all([gunzipJSON(DSC.tract.pts), blobURL(DSC.tract.coarse), fetch('t/meta.json').then(r => r.json())]);
       DSDATA.tract = unpackPts('tract', tp); DSDATA.tractCoarse = tc; TMETA = tm;
     }
     const gp = ds === 'bg' ? (GPRE || Promise.all([gunzipJSON(DSC.bg.pts), fetch('g/meta.json').then(r => r.json())])) : null;
-    const [pts, cu, meta] = await Promise.all([ds === 'bg' ? gp.then(a => a[0]) : DSDATA[ds] ? null : gunzipJSON(DSC[ds].pts), ds === 'bg' ? DSDATA.tractCoarse : blobURL(DSC[ds].coarse), ds === 'bg' ? gp.then(a => a[1]) : ds !== 'zip' ? fetch('t/meta.json').then(r => r.json()) : null]);
+    const [pts, cu, meta] = await Promise.all([ds === 'bg' ? gp.then(a => a[0]) : DSDATA[ds] ? null : gunzipJSON(DSC[ds].pts), ds === 'bg' ? DSDATA.tractCoarse : blobURL(DSC[ds].coarse), ds === 'bg' ? gp.then(a => a[1]) : ds !== 'zip' ? fetch(DSC[ds].meta || 't/meta.json').then(r => r.json()) : null]);
     if (!DSDATA[ds]) DSDATA[ds] = ds === 'bg' ? { features: DSDATA.tract.features.concat(unpackPts('bg', pts, 'g').features) } : unpackPts(ds, pts);
-    DSDATA[ds + 'Coarse'] = cu; if (meta) { if (ds === 'bg') GMETA = meta; else TMETA = meta; }
+    DSDATA[ds + 'Coarse'] = cu; if (meta) { if (ds === 'bg') GMETA = meta; else if (ds === 'crime') CMETA = meta; else TMETA = meta; }
   }
   if (hoverZ) hoverZ = '';
   for (const id of LAYERS) for (const l of ['-fill', '-hatch', '-line', '-hover']) if (map.getLayer(id + l)) map.removeLayer(id + l);
@@ -422,7 +450,7 @@ document.getElementById('dBg').onclick = () => setDataset('bg');
 function loadFine() {
   if (map.getZoom() < FINEZ - 0.8) return;                     // prefetch a little early so shapes are ready when they're shown
   const b = map.getBounds(), c = map.getCenter();
-  const want = Object.entries(DS === 'zip' ? META.states : DS === 'bg' ? GMETA.states : TMETA.states).filter(([st, bb]) => !loadedStates.has(st) && !loadingStates.has(st) &&
+  const want = Object.entries(DS === 'zip' ? META.states : DS === 'bg' ? GMETA.states : DS === 'crime' ? CMETA.states : TMETA.states).filter(([st, bb]) => !loadedStates.has(st) && !loadingStates.has(st) &&
       !(bb[2] < b.getWest() || bb[0] > b.getEast() || bb[3] < b.getSouth() || bb[1] > b.getNorth()))
     .sort((a, d) => Math.hypot((a[1][0] + a[1][2]) / 2 - c.lng, (a[1][1] + a[1][3]) / 2 - c.lat) - Math.hypot((d[1][0] + d[1][2]) / 2 - c.lng, (d[1][1] + d[1][3]) / 2 - c.lat));
   const ds = DS;
@@ -458,11 +486,15 @@ function inView() {
 function nice(v, m) {
   if (m === 'rent') return v < 2000 ? Math.round(v / 25) * 25 : Math.round(v / 50) * 50;
   if (m === 'income') return Math.round(v / 1000) * 1000;
+  if (CRIMEM(m) || COMM(m)) return v < 10 ? Math.round(v * 10) / 10 : Math.round(v);
   const mag = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.round(v / mag) * mag;   // two significant figures
 }
 let FITTED = false;
+const CRIMEM = m => m === 'violent' || m === 'property';
+const COMM = m => MEASURES[m].unit === '%';
+const r1 = x => x < 10 ? x.toFixed(1) : Math.round(x).toLocaleString();
 function fitBreaks() {
-  for (const m of ['value', 'rent', 'income']) BR[m] = MEASURES[m].breaks.slice(); FITTED = false;
+  for (const m in MEASURES) BR[m] = MEASURES[m].breaks.slice(); FITTED = false;
   if (!ALL || !fitOn()) return;
   const m = measure, prop = MEASURES[m].prop, vals = inView().map(p => p[prop]).sort((a, b) => a - b);
   if (vals.length < 40) return;                                           // too few ZIPs in view to fit 16 colours: keep the national scale
@@ -473,7 +505,7 @@ function fitBreaks() {
   const br = [];
   for (const cut of cuts) {
     let b = nice(q(cut), m);
-    const step = m === 'rent' ? 25 : m === 'income' ? 1000 : nice(Math.max(b, 1000) / 50, 'value');
+    const step = m === 'rent' ? 25 : m === 'income' ? 1000 : CRIMEM(m) || COMM(m) ? (b < 10 ? 0.1 : 1) : nice(Math.max(b, 1000) / 50, 'value');
     if (br.length && b <= br[br.length - 1]) b = br[br.length - 1] + step;
     br.push(b);
   }
@@ -485,7 +517,7 @@ const median = a => { const s = [...a].sort((x, y) => x - y); return s[Math.floo
 function initPanel() {
   const P = ALL.features.map(f => f.properties);
   setHeader();
-  if (VIEW === 'income' || DS === 'bg') { fitBreaks(); drawHist(); return; }
+  if (VIEW === 'income' || VIEW === 'crime' || VIEW === 'commute' || DS === 'bg' || DS === 'crime') { fitBreaks(); drawHist(); return; }
   if (DS === 'tract') {
     const v = P.filter(p => p.v).map(p => p.v), r = P.filter(p => p.r).map(p => p.r);
     META.tcalc = { mv: median(v), mr: median(r), nv: v.length, nr: r.length };
@@ -507,7 +539,19 @@ function setHeader() {
     document.getElementById('lede').innerHTML = `<strong>${(+RACE_META?.people || 0).toLocaleString()} people</strong> as colored dots, by race and Hispanic or Latino origin, from the Census Bureau's 2020–2024 survey. Each dot stands for ${RACE_PER()} people; dots are placed at random within each block group.`;
     return;
   }
+  if (VIEW === 'crime') {
+    document.getElementById('eyebrow').textContent = 'United States, by police agency';
+    document.getElementById('h1').innerHTML = 'Reported <span>crime</span>';
+    const C = CMETA;
+    document.getElementById('lede').innerHTML = DS !== 'crime' || !C ? 'Loading police areas…' : `Offenses reported to the FBI in 2025 per 1,000 residents, for <strong>${P.filter(p => p.kind === 'c' || p.kind === 'k').length.toLocaleString()} city and county police areas</strong> covering ${(C.covered_pop / 1e6).toFixed(0)} million people. Across them: <strong>${(1000 * C.v / C.covered_pop).toFixed(1)} violent</strong> and <strong>${(1000 * C.p / C.covered_pop).toFixed(1)} property crimes</strong> per 1,000 residents.`;
+    return;
+  }
   document.getElementById('eyebrow').textContent = 'United States, by ' + (DS === 'zip' ? 'ZIP code' : DS === 'tract' ? 'Census tract' : 'Census block group');
+  if (VIEW === 'commute') {
+    document.getElementById('h1').innerHTML = 'Getting <span>to work</span>';
+    document.getElementById('lede').innerHTML = `<strong>${n.toLocaleString()} ${what}</strong> colored by the share of workers who ${MEASURES[measure].verb}, from the Census Bureau's 2020–2024 survey. Nationally, 68.8% drove alone, 8.5% carpooled, 3.2% took transit, 2.8% walked or biked and 15.1% worked from home.`;
+    return;
+  }
   document.getElementById('h1').innerHTML = VIEW === 'income' ? 'Household <span>income</span>' : 'Home values <span>&amp; rents</span>';
   const vals = P.filter(p => p[VIEW === 'income' ? 'i' : 'v'] != null && (DS !== 'bg' || p.lv === 'g')).map(p => p[VIEW === 'income' ? 'i' : 'v']);
   const md = vals.length ? short$(median(vals)) : '—';
@@ -529,10 +573,10 @@ function drawHist() {
   let s = `<svg viewBox="0 -4 ${W} ${H + 30}" role="img"><defs><pattern id="hp" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="5" fill="rgba(17,21,29,.75)"/></pattern></defs>`;
   counts.forEach((c, i) => {
     const h = mx ? Math.max(c ? 2 : 0, c / mx * H) : 0, hh = mx ? hatch[i] / mx * H : 0;
-    s += `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" rx="1.5" fill="${RAMP[i]}"><title>${c.toLocaleString()} ZIP codes</title></rect>`;
+    s += `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" rx="1.5" fill="${RAMP[i]}"><title>${c.toLocaleString()} ${DSC[DS].many}</title></rect>`;
     if (hh > 0.5) s += `<rect x="${i * bw + 1}" y="${H - hh}" width="${bw - 2}" height="${hh}" fill="url(#hp)"/>`;
   });
-  const lab = b => measure === 'rent' ? '$' + b.toLocaleString() : short$(b);
+  const lab = b => CRIMEM(measure) ? r1(b) : COMM(measure) ? r1(b) + '%' : measure === 'rent' ? '$' + b.toLocaleString() : short$(b);
   B.forEach((b, i) => { if (i === 1 || i === 7 || i === 13) s += `<text x="${(i + 1) * bw}" y="${H + 18}" text-anchor="middle">${lab(b)}</text>`; });
   s += `<defs><linearGradient id="lg">${RAMP.map((c, i) => `<stop offset="${((i + 0.5) / NC * 100).toFixed(1)}%" stop-color="${c}"/>`).join('')}</linearGradient></defs>`;
   s += `<rect x="0" y="${H + 2}" width="${W}" height="4" rx="2" fill="url(#lg)"/></svg>`;
@@ -541,6 +585,24 @@ function drawHist() {
   document.getElementById('scaleText').textContent = FIT ? (FITTED ? 'Colors fit what is in view.' : 'Too few areas in view to fit colors: national scale.') : 'Colors use one national scale.';
   document.getElementById('scaleBtn').textContent = FIT ? 'Use one national scale' : 'Fit colors to the view';
   const scale = FITTED ? `The 12 middle colors each hold about a twelfth of the ${vis.length.toLocaleString()} ${U.many} in view; the two deepest at each end mark the lowest and highest 3% (1% for the deepest). The same color means different amounts at different places and zooms.` : '';
+  if (COMM(measure)) {
+    // share of all workers in view (areas weighted by their number of workers)
+    let wk = 0, s = 0; const pr = MEASURES[measure].prop;
+    for (const p of vis) if (p.w) { wk += p.w; s += p.w * p[pr]; }
+    document.getElementById('bigNum').textContent = wk ? (s / wk).toFixed(1) + '%' : '—';
+    document.getElementById('bigWhat').innerHTML = `of the ${Math.round(wk).toLocaleString()} workers in view ${MEASURES[measure].short}<br>Census survey, 2020–2024`;
+    document.getElementById('legendNote').innerHTML = scale + ` How workers aged 16 and over usually got to work in the week before the survey (the mode used for the longest distance). Averaged over 2020–2024, so the work-from-home share mixes pandemic and later years. Grey areas have fewer than 20 workers.` + (DS === 'bg' && map.getZoom() < FINEZ ? ' Zoom in to see block groups; tracts are shown until then.' : DS === 'bg' ? ' Block groups have wide margins of error.' : '');
+    return;
+  }
+  if (CRIMEM(measure)) {
+    // the rate across the areas in view: all their offenses over all their residents (so big cities weigh in by size)
+    let pop = 0, cnt = 0; const ix = measure === 'violent' ? 0 : 5;
+    for (const p of vis) if (p.n && p.n[ix] != null) { pop += p.pop; cnt += p.n[ix]; }
+    document.getElementById('bigNum').textContent = pop ? (1000 * cnt / pop).toFixed(1) : '—';
+    document.getElementById('bigWhat').innerHTML = `${measure} crimes per 1,000 residents in view<br>reported to the FBI, 2025`;
+    document.getElementById('legendNote').innerHTML = scale + ` Bars count police areas. ${measure === 'violent' ? 'Violent crime: murder, rape, robbery and aggravated assault.' : 'Property crime: burglary, theft and motor vehicle theft.'} Rates are per resident, so downtowns, tourist spots and towns with big stores or highway stops look high: visitors are victims too but not residents. Only crimes reported to police count. <b>Grey</b>: no county agency reported for 2025 (often state police patrol there), a city reported part of the year, or too few residents.`;
+    return;
+  }
   if (measure === 'income') {
     document.getElementById('bigNum').textContent = med ? short$(med) : '—';
     document.getElementById('bigWhat').innerHTML = `median ${DS === 'zip' ? 'ZIP' : DS === 'tract' || map.getZoom() < FINEZ ? 'tract' : 'block group'} in view, median household income<br>Census survey, 2020–2024`;
@@ -569,14 +631,21 @@ function drawHist() {
 }
 function setView(v) {
   VIEW = v;
-  for (const [id, k] of [['vPrice', 'price'], ['vIncome', 'income'], ['vRace', 'race']]) document.getElementById(id).setAttribute('aria-pressed', String(v === k));
-  const race = v === 'race';
+  for (const [id, k] of [['vPrice', 'price'], ['vIncome', 'income'], ['vRace', 'race'], ['vCommute', 'commute'], ['vCrime', 'crime']]) document.getElementById(id).setAttribute('aria-pressed', String(v === k));
+  const race = v === 'race', crime = v === 'crime';
   document.getElementById('measureSeg').hidden = v !== 'price';
-  for (const id of ['areaSeg', 'bigRow', 'hist', 'legendNote', 'scaleRow']) document.getElementById(id).hidden = race;
+  document.getElementById('crimeSeg').hidden = !crime;
+  document.getElementById('commuteSeg').hidden = v !== 'commute';
+  if (v === 'commute') measure = COMMUTE_BTN.find(([id]) => document.getElementById(id).getAttribute('aria-pressed') === 'true')[1];
+  for (const id of ['bigRow', 'hist', 'legendNote', 'scaleRow']) document.getElementById(id).hidden = race;
+  document.getElementById('areaSeg').hidden = race || crime;
+  if (crime) measure = document.getElementById('mProperty').getAttribute('aria-pressed') === 'true' ? 'property' : 'violent';
+  if (crime && DS !== 'crime') { PREVDS = DS || 'bg'; setDataset('crime', true); }
+  else if (!crime && DS === 'crime') { const back = PREVDS; DS = 'crime'; setDataset(back, true); }
   document.getElementById('raceLegend').hidden = !race;
-  document.getElementById('censusRow').hidden = race || v === 'income' || DS !== 'zip';
-  document.getElementById('zipSrc').textContent = v === 'income' ? 'Census' : 'Zillow';
-  measure = v === 'income' ? 'income' : v === 'price' ? (document.getElementById('mRent').getAttribute('aria-pressed') === 'true' ? 'rent' : 'value') : measure;
+  document.getElementById('censusRow').hidden = v !== 'price' || DS !== 'zip';
+  document.getElementById('zipSrc').textContent = v === 'price' ? 'Zillow' : 'Census';
+  if (!crime && v !== 'commute') measure = v === 'income' ? 'income' : v === 'price' ? (document.getElementById('mRent').getAttribute('aria-pressed') === 'true' ? 'rent' : 'value') : measure;
   for (const id of LAYERS) for (const l of ['-fill', '-line', '-hover']) if (map.getLayer(id + l)) map.setLayoutProperty(id + l, 'visibility', race ? 'none' : 'visible');
   K.clear(); setHeader(); applyMeasure(); applyHatch();
   if (race) showDots(); else hideDots();
@@ -584,6 +653,20 @@ function setView(v) {
 document.getElementById('vPrice').onclick = () => setView('price');
 document.getElementById('vIncome').onclick = () => setView('income');
 document.getElementById('vRace').onclick = () => setView('race');
+document.getElementById('vCrime').onclick = () => setView('crime');
+document.getElementById('vCommute').onclick = () => setView('commute');
+const COMMUTE_BTN = [['cDA', 'drive'], ['cCP', 'carpool'], ['cTR', 'transit'], ['cWB', 'walk'], ['cWH', 'home']];
+for (const [id, m] of COMMUTE_BTN) document.getElementById(id).onclick = () => {
+  for (const [j] of COMMUTE_BTN) document.getElementById(j).setAttribute('aria-pressed', String(j === id));
+  if (VIEW === 'commute') { measure = m; K.clear(); setHeader(); applyMeasure(); }
+};
+function setCrime(m) {
+  document.getElementById('mViolent').setAttribute('aria-pressed', String(m === 'violent'));
+  document.getElementById('mProperty').setAttribute('aria-pressed', String(m === 'property'));
+  if (VIEW === 'crime') { measure = m; K.clear(); applyMeasure(); }
+}
+document.getElementById('mViolent').onclick = () => setCrime('violent');
+document.getElementById('mProperty').onclick = () => setCrime('property');
 function setMeasure(m) {
   measure = m; if (VIEW !== 'price') return;
   document.getElementById('mValue').setAttribute('aria-pressed', String(m === 'value'));
@@ -676,7 +759,25 @@ const rTop = p => p.r >= 3501 ? '$3,500+' : p.r <= 99 ? '$99 or less' : fmt$(p.r
 const iTop = p => p.i >= 250001 ? '$250,000+' : p.i <= 2499 ? '$2,499 or less' : fmt$(p.i);
 function tipHtml(p) {
   p = Object.assign({}, BYZ.get(p.z) || {}, p);
+  if (DS === 'crime') {
+    const st = p.s, nm = p.name + ', ' + st;
+    const head = `<div class="z">${p.kind === 'k' || p.kind === 'n' ? nm + (p.kind === 'k' ? ' · outside city police areas' : '') : nm}</div>`;
+    if (p.kind === 'n') return head + `<div class="src">No county sheriff or county police reported a full year of 2025 to the FBI for this area. State police or a non-reporting agency may patrol it.</div>`;
+    if (p.kind === 'p') return head + `<div class="src">${p.ag} reported only ${p.months} month${p.months === 1 ? '' : 's'} of 2025, so it has no yearly rate.</div>`;
+    if (p.kind === 's' || !p.n) return head + `<div class="src">Too few residents for a rate.</div>`;
+    const n = p.n, c = i => n[i] == null ? '—' : n[i].toLocaleString();
+    return head
+      + `<div class="row"><span>Violent crime</span><b>${p.vr != null ? r1(p.vr) : '—'} <small>per 1,000</small></b></div><div class="src">${c(0)} reported: ${c(1)} murders, ${c(2)} rapes, ${c(3)} robberies, ${c(4)} aggravated assaults</div>`
+      + `<div class="row"><span>Property crime</span><b>${p.pr != null ? r1(p.pr) : '—'} <small>per 1,000</small></b></div><div class="src">${c(5)} reported: ${c(6)} burglaries, ${c(7)} thefts, ${c(8)} vehicle thefts</div>`
+      + `<div class="src">${p.pop.toLocaleString()} residents${p.kind === 'k' ? ' (Census estimate for the area outside city police)' : ''} · ${p.ag}, FBI 2025</div>`;
+  }
   const head = DS === 'zip' ? `ZIP ${p.z}${p.c ? ' · ' + p.c + ', ' + p.s : ''}` : p.lv === 'g' ? `Tract ${p.name} · ${p.county}, ${p.s}` : `Census tract ${p.name} · ${p.county}, ${p.s}`;
+  if (VIEW === 'commute') {
+    if (p.cda == null) return `<div class="z">${head}</div><div class="src">Fewer than 20 workers: no estimate</div>`;
+    const row = (k, lab) => `<div class="row"${measure === k ? ' style="color:var(--ink)"' : ''}><span>${measure === k ? '<b>' + lab + '</b>' : lab}</span><b>${p[MEASURES[k].prop]}%</b></div>`;
+    return `<div class="z">${head}</div>` + row('drive', 'Drove alone') + row('carpool', 'Carpooled') + row('transit', 'Public transit') + row('walk', 'Walked or biked') + row('home', 'Worked from home')
+      + `<div class="row"><span>Other (taxi, motorcycle…)</span><b>${p.cot}%</b></div><div class="src">${p.w.toLocaleString()} workers 16+ · Census ACS 2020–2024</div>`;
+  }
   if (VIEW === 'income') return `<div class="z">${head}</div>` + (p.i ? `<div class="row"><span>Median household income</span><b>${iTop(p)}</b></div><div class="src">Census ACS 2020–2024, 2024 dollars${p.im && p.i < 250001 && p.i > 2499 ? ' · ±' + fmt$(p.im) : ''}</div>`
     : `<div class="row"><span>Median household income</span><b>—</b></div><div class="src">Too few households for an estimate</div>`);
   if (p.lv === 'g') p.name = p.name;
