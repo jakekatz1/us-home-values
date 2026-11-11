@@ -84,6 +84,19 @@ h1 span { color: var(--apricot); }
 .big .what { font-size: 12.5px; color: var(--muted); text-align: right; line-height: 1.35; }
 .hist svg { display: block; width: 100%; height: auto; overflow: visible; }
 .hist text { font: 400 9.5px var(--f-data); fill: var(--muted); }
+/* two-handle range: highlight the areas between the handles, fade the rest */
+.dual { position: relative; height: 20px; margin: 2px 0 0; }
+.dual::before { content: ""; position: absolute; left: 7px; right: 7px; top: 9px; height: 2px; border-radius: 1px; background: var(--rule); }
+.dual .fill { position: absolute; top: 9px; height: 2px; background: var(--apricot); }
+.dual input { position: absolute; left: 0; top: 2px; width: 100%; height: 16px; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.dual input::-webkit-slider-runnable-track { background: none; height: 16px; }
+.dual input::-moz-range-track { background: none; }
+.dual input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 14px; height: 14px; margin-top: 1px; border-radius: 50%; background: #fff; border: 2px solid var(--apricot); box-sizing: border-box; cursor: ew-resize; }
+.dual input::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid var(--apricot); box-sizing: border-box; cursor: ew-resize; }
+.dual input:focus-visible { outline: none; }
+.dual input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--apricot); outline-offset: 2px; }
+.rngtxt { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font: 400 11.5px var(--f-data); color: var(--muted); margin-top: 2px; }
+.rngtxt b { color: var(--ink); font-weight: 600; }
 .note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .note b { color: var(--ink); font-weight: 600; }
 .sw { width: 12px; height: 12px; display: inline-block; vertical-align: -1px; border-radius: 2px; margin-right: 6px;
@@ -106,6 +119,8 @@ h1 span { color: var(--apricot); }
 details { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 details summary { cursor: pointer; color: var(--ink); font-weight: 600; font-size: 13px; }
 details p { margin: 8px 0 0; }
+details.adv { margin-top: 2px; }
+details.adv .tog { margin-top: 10px; color: var(--ink); }
 details strong { color: var(--ink); font-weight: 600; }
 details a { color: var(--ink); }
 
@@ -163,8 +178,12 @@ details a { color: var(--ink); }
     <div id="raceLegend" class="race" hidden></div>
     <div class="big" id="bigRow"><span class="num" id="bigNum"></span><span class="what" id="bigWhat"></span></div>
     <div class="hist" id="hist" aria-hidden="true"></div>
+    <div id="rngRow">
+      <div class="dual"><span class="fill" id="rngFill"></span><input type="range" id="rLo" min="0" max="1000" value="0" aria-label="Highlight from"><input type="range" id="rHi" min="0" max="1000" value="1000" aria-label="Highlight to"></div>
+      <div class="rngtxt"><span id="rngText">Drag the ends to highlight a range</span><button type="button" class="linkbtn" id="rngReset" hidden>Show all</button></div>
+    </div>
     <p class="note" id="legendNote"></p>
-    <p class="note scale-row" id="scaleRow"><span id="scaleText"></span> <button type="button" class="linkbtn" id="scaleBtn"></button></p>
+    <p class="note scale-row" id="scaleRow"><span id="scaleText"></span> <button type="button" class="linkbtn" id="scaleBtn" hidden></button></p>
   </section>
   <section>
     <div class="eyebrow">Go to a ZIP code or city</div>
@@ -179,10 +198,16 @@ details a { color: var(--ink); }
     <label class="tog" id="censusRow"><input type="checkbox" id="tCensus" checked> Census rent where Zillow has none <small id="nCensus"></small></label>
     <label class="tog"><input type="checkbox" id="tCity" checked> City names</label>
     <label class="tog"><input type="checkbox" id="tState" checked> State lines</label>
+    <details class="adv">
+      <summary>Advanced</summary>
+      <label class="tog"><input type="checkbox" id="tFit"> Fit colors to the view</label>
+      <label class="tog"><input type="checkbox" id="tBorders"> Borders around areas</label>
+    </details>
   </section>
   <section>
     <details>
       <summary>What's new</summary>
+      <p><strong>v10</strong>, Nov 10, 2026: an Advanced section holds "Fit colors to the view" and a new "Borders around areas" switch; area borders are now off by default (hovering still outlines an area). A two-handle slider under the legend highlights a range of values: areas inside it keep their color, everything else fades almost away. The range stays on its values as the colors refit while you move around.</p>
       <p><strong>v9</strong>, Nov 10, 2026: two new views. Commute: the share of workers who drive alone, carpool, take transit, walk or bike, or work from home, for block groups, tracts and ZIP codes. Crime: violent and property crimes reported to the FBI in 2025 per 1,000 residents, for each city police and county sheriff area.</p>
       <p><strong>v8</strong>, Nov 10, 2026: a light / dark map style under the background-map switch (it works with the background map on or off); zoom in four levels further (to street level); the color-strength slider also fades the roads drawn over the colors (stronger colors, fainter roads); race dots resized so each covers a fixed patch of ground: they no longer pile up, sparse areas look sparse and cities fill in, so the dots double as a population-density map. The map now opens on block groups with one national color scale, and the area buttons run from finest to coarsest.</p>
       <p><strong>v7</strong>, Nov 10, 2026: three views at the top: Home prices, Income (median household income) and Race (a dot map, one dot per 20 people up close); Census block groups as a third, finer set of areas; links to the building-age maps removed.</p>
@@ -283,9 +308,9 @@ const FILL = ['case', ['<', ['coalesce', ['feature-state', 'k'], -1], 0], '#2a30
 function addZipLayers(src, id, minz, maxz, filter) {
   const common = { source: src }; if (minz != null) common.minzoom = minz; if (maxz != null) common.maxzoom = maxz;
   const F = f => filter ? (f ? ['all', filter, f] : filter) : f, opt = o => { const f = o.filter; delete o.filter; if (f) o.filter = f; return o; };
-  map.addLayer(opt({ ...common, id: id + '-fill', type: 'fill', filter: F(null), layout: { visibility: VIEW === 'race' ? 'none' : 'visible' }, paint: { 'fill-color': FILL, 'fill-opacity': colorOpacity() } }), 'base-over');
+  map.addLayer(opt({ ...common, id: id + '-fill', type: 'fill', filter: F(null), layout: { visibility: VIEW === 'race' ? 'none' : 'visible' }, paint: { 'fill-color': FILL, 'fill-opacity': fillOpacity() } }), 'base-over');
   map.addLayer(opt({ ...common, id: id + '-hatch', type: 'fill', filter: F(['==', ['get', 'rs'], 'c']), layout: { visibility: hatchOn() ? 'visible' : 'none' }, paint: { 'fill-pattern': 'hatch', 'fill-opacity': Math.min(1, colorOpacity() + 0.1) } }), 'base-over');
-  map.addLayer(opt({ ...common, id: id + '-line', type: 'line', filter: F(null), layout: { visibility: VIEW === 'race' ? 'none' : 'visible' }, paint: { 'line-color': '#11151d', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.05, 8, 0.4, 12, 0.9] } }), 'states-line');
+  map.addLayer(opt({ ...common, id: id + '-line', type: 'line', filter: F(null), layout: { visibility: VIEW !== 'race' && bordersOn() ? 'visible' : 'none' }, paint: { 'line-color': '#11151d', 'line-opacity': lineOpacity(), 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.05, 8, 0.4, 12, 0.9] } }), 'states-line');
   map.addLayer(opt({ ...common, id: id + '-hover', type: 'line', filter: F(null), paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': ['case', ['boolean', ['feature-state', 'h'], false], 1, 0] } }));
   LAYERS.push(id);
 }
@@ -301,6 +326,14 @@ function setMode(d) {
   if (map.loaded() || map.getLayer('states-line')) applyBase();
 }
 const colorOpacity = () => baseOn() ? +document.getElementById('opac').value / 100 : 0.92;
+// ---- highlighted range: values between the two handles keep their color strength, everything else (and grey no-data areas) fades
+const RNG = { m: null, lo: null, hi: null };
+const rngOn = () => RNG.m === measure && (RNG.lo != null || RNG.hi != null) && VIEW !== 'race';
+const kOf = x => classOf({ [MEASURES[measure].prop]: x });
+const rngK = () => [RNG.lo == null ? -2 : kOf(RNG.lo), RNG.hi == null ? 2 : kOf(RNG.hi)];
+const inRng = () => { const [a, b] = rngK(), k = ['coalesce', ['feature-state', 'k'], -1]; return ['all', ['>=', k, a], ['<=', k, b], ['>=', k, 0]]; };
+const fillOpacity = () => rngOn() ? ['case', inRng(), colorOpacity(), colorOpacity() * 0.1] : colorOpacity();
+const lineOpacity = () => rngOn() ? ['case', inRng(), 1, 0.12] : 1;
 // roads drawn over the colors fade as the color strength goes up (strong colors: faint roads; weak colors: full-strength roads)
 const roadOpacity = () => { const t = Math.max(0, (colorOpacity() - 0.15) / 0.85); return Math.max(0.1, 1 - 1.05 * t ** 0.8); };
 const BASE_LAYERS = ['land', 'lakes', 'rivers', 'roads0', 'roads3'];
@@ -352,7 +385,8 @@ function applyBase() {
   map.setLayoutProperty('states-fill', 'visibility', on ? 'none' : 'visible');
   map.setPaintProperty('bg', 'background-color', on ? (DARK ? '#0f1b2b' : '#c9dcec') : (DARK ? '#11151d' : '#e8ebf0'));
   for (const id of LAYERS) {
-    if (map.getLayer(id + '-fill')) map.setPaintProperty(id + '-fill', 'fill-opacity', colorOpacity());
+    if (map.getLayer(id + '-fill')) map.setPaintProperty(id + '-fill', 'fill-opacity', fillOpacity());
+    if (map.getLayer(id + '-line')) map.setPaintProperty(id + '-line', 'line-opacity', lineOpacity());
     if (map.getLayer(id + '-hatch')) map.setPaintProperty(id + '-hatch', 'fill-opacity', Math.min(1, colorOpacity() + 0.1));
   }
   loadRoads();
@@ -370,6 +404,39 @@ function classOf(p) {
   const f = Math.max(0, Math.min(1, (x - a) / ((b - a) || 1)));
   return Math.round((i + f) / NC * 400) / 400;
 }
+function valueOfK(k) {                                         // the inverse of classOf: a color position back to a value
+  const B = BR[measure], p = Math.max(0, Math.min(NC - 1e-6, k * NC)), i = Math.floor(p), f = p - i;
+  const a = i > 0 ? B[i - 1] : B[0] - (B[1] - B[0]), b = i < NC - 1 ? B[i] : B[NC - 2] + (B[NC - 2] - B[NC - 3]);
+  return Math.max(0, a + f * (b - a));
+}
+const fmtV = x => CRIMEM(measure) ? r1(x) + ' per 1,000' : COMM(measure) ? r1(x) + '%' : measure === 'rent' ? '$' + Math.round(x).toLocaleString() + '/mo' : short$(x);
+function syncRange() {                                         // after the scale changes: put the handles back on the chosen values
+  if (RNG.m !== measure) { RNG.m = measure; RNG.lo = RNG.hi = null; }
+  const lo = RNG.lo == null ? 0 : Math.round(kOf(RNG.lo) * 1000), hi = RNG.hi == null ? 1000 : Math.round(kOf(RNG.hi) * 1000);
+  const L = document.getElementById('rLo'), H = document.getElementById('rHi'); L.value = lo; H.value = hi;
+  const pct = v => `calc(7px + (100% - 14px) * ${v / 1000})`;
+  const fill = document.getElementById('rngFill'); fill.style.left = pct(lo); fill.style.width = `calc((100% - 14px) * ${(hi - lo) / 1000})`;
+  const on = rngOn();
+  document.getElementById('rngReset').hidden = !on;
+  document.getElementById('rngText').innerHTML = on ? `Highlighting <b>${RNG.lo == null ? 'lowest' : fmtV(RNG.lo)}</b> to <b>${RNG.hi == null ? 'highest' : fmtV(RNG.hi)}</b>` : 'Drag the ends to highlight a range';
+}
+function applyRange() {
+  for (const id of LAYERS) {
+    if (map.getLayer(id + '-fill')) map.setPaintProperty(id + '-fill', 'fill-opacity', fillOpacity());
+    if (map.getLayer(id + '-line')) map.setPaintProperty(id + '-line', 'line-opacity', lineOpacity());
+  }
+}
+let rngRAF = 0;
+function onRange(e) {
+  const L = document.getElementById('rLo'), H = document.getElementById('rHi');
+  if (+L.value > +H.value - 10) { if (e.target === L) L.value = +H.value - 10; else H.value = +L.value + 10; }
+  RNG.m = measure; RNG.lo = +L.value <= 0 ? null : valueOfK(+L.value / 1000); RNG.hi = +H.value >= 1000 ? null : valueOfK(+H.value / 1000);
+  if (RNG.lo != null) RNG.lo = nice(RNG.lo, measure); if (RNG.hi != null) RNG.hi = nice(RNG.hi, measure);
+  syncRange();
+  cancelAnimationFrame(rngRAF); rngRAF = requestAnimationFrame(() => { applyRange(); drawHist(); });
+}
+document.getElementById('rLo').addEventListener('input', onRange); document.getElementById('rHi').addEventListener('input', onRange);
+document.getElementById('rngReset').onclick = () => { RNG.lo = RNG.hi = null; syncRange(); applyRange(); drawHist(); };
 function paintClasses(only) {                                  // only: a state code just loaded (set all its ZIPs); else update changed ZIPs
   for (const f of ALL.features) {
     const p = f.properties;
@@ -380,7 +447,7 @@ function paintClasses(only) {                                  // only: a state 
   }
 }
 const sources = () => [DS + '-c', ...[...loadedStates].map(s => DS + '-s-' + s)];
-function applyMeasure() { if (!ALL) return; if (VIEW === 'race') { updateRaceLegend(); return; } fitBreaks(); paintClasses(); applyHatch(); drawHist(); }
+function applyMeasure() { if (!ALL) return; if (VIEW === 'race') { updateRaceLegend(); return; } fitBreaks(); paintClasses(); applyHatch(); syncRange(); applyRange(); drawHist(); }
 
 function hatchImage() {
   const s = 8, c = document.createElement('canvas'); c.width = c.height = s; const g = c.getContext('2d');
@@ -471,6 +538,11 @@ map.on('zoom', () => { if (map.getZoom() >= FINEZ - 0.8) loadFine(); });
 // ---- colour scale fitted to the view: 12 middle classes holding about equal numbers of the ZIPs in view, two extreme classes at each end
 let FIT = false; const fitOn = () => FIT;
 document.getElementById('scaleBtn').onclick = () => { FIT = !FIT; applyMeasure(); };
+document.getElementById('tFit').onchange = e => { FIT = e.target.checked; applyMeasure(); };
+// area outlines: off by default (hover still outlines the area under the pointer)
+const bordersOn = () => document.getElementById('tBorders').checked;
+function applyBorders() { for (const id of LAYERS) if (map.getLayer(id + '-line')) map.setLayoutProperty(id + '-line', 'visibility', VIEW !== 'race' && bordersOn() ? 'visible' : 'none'); }
+document.getElementById('tBorders').onchange = applyBorders;
 function inView() {
   const b = map.getBounds(), w = b.getWest(), e = b.getEast(), s = b.getSouth(), n = b.getNorth();
   const M = MEASURES[measure], census = document.getElementById('tCensus').checked, out = [], lvNow = map.getZoom() < FINEZ ? 't' : 'g';
@@ -571,9 +643,11 @@ function drawHist() {
   }
   const W = 320, H = 92, bw = W / NC, mx = Math.max(...counts);
   let s = `<svg viewBox="0 -4 ${W} ${H + 30}" role="img"><defs><pattern id="hp" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="5" fill="rgba(17,21,29,.75)"/></pattern></defs>`;
+  const [ka, kb] = rngOn() ? rngK() : [-2, 2];
   counts.forEach((c, i) => {
+    const dim = (i + 1) / NC <= ka || i / NC > kb ? ' opacity="0.22"' : '';
     const h = mx ? Math.max(c ? 2 : 0, c / mx * H) : 0, hh = mx ? hatch[i] / mx * H : 0;
-    s += `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" rx="1.5" fill="${RAMP[i]}"><title>${c.toLocaleString()} ${DSC[DS].many}</title></rect>`;
+    s += `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" rx="1.5" fill="${RAMP[i]}"${dim}><title>${c.toLocaleString()} ${DSC[DS].many}</title></rect>`;
     if (hh > 0.5) s += `<rect x="${i * bw + 1}" y="${H - hh}" width="${bw - 2}" height="${hh}" fill="url(#hp)"/>`;
   });
   const lab = b => CRIMEM(measure) ? r1(b) : COMM(measure) ? r1(b) + '%' : measure === 'rent' ? '$' + b.toLocaleString() : short$(b);
@@ -582,7 +656,7 @@ function drawHist() {
   s += `<rect x="0" y="${H + 2}" width="${W}" height="4" rx="2" fill="url(#lg)"/></svg>`;
   document.getElementById('hist').innerHTML = s;
   const C = META.calc, med = vis.length ? median(vis.map(p => p[M.prop])) : null, U = DSC[DS];
-  document.getElementById('scaleText').textContent = FIT ? (FITTED ? 'Colors fit what is in view.' : 'Too few areas in view to fit colors: national scale.') : 'Colors use one national scale.';
+  document.getElementById('scaleText').textContent = FIT ? (FITTED ? 'Colors fit what is in view (set under Advanced).' : 'Too few areas in view to fit colors: national scale.') : 'Colors use one national scale (fit them to the view under Advanced).';
   document.getElementById('scaleBtn').textContent = FIT ? 'Use one national scale' : 'Fit colors to the view';
   const scale = FITTED ? `The 12 middle colors each hold about a twelfth of the ${vis.length.toLocaleString()} ${U.many} in view; the two deepest at each end mark the lowest and highest 3% (1% for the deepest). The same color means different amounts at different places and zooms.` : '';
   if (COMM(measure)) {
@@ -637,7 +711,7 @@ function setView(v) {
   document.getElementById('crimeSeg').hidden = !crime;
   document.getElementById('commuteSeg').hidden = v !== 'commute';
   if (v === 'commute') measure = COMMUTE_BTN.find(([id]) => document.getElementById(id).getAttribute('aria-pressed') === 'true')[1];
-  for (const id of ['bigRow', 'hist', 'legendNote', 'scaleRow']) document.getElementById(id).hidden = race;
+  for (const id of ['bigRow', 'hist', 'rngRow', 'legendNote', 'scaleRow']) document.getElementById(id).hidden = race;
   document.getElementById('areaSeg').hidden = race || crime;
   if (crime) measure = document.getElementById('mProperty').getAttribute('aria-pressed') === 'true' ? 'property' : 'violent';
   if (crime && DS !== 'crime') { PREVDS = DS || 'bg'; setDataset('crime', true); }
@@ -646,7 +720,8 @@ function setView(v) {
   document.getElementById('censusRow').hidden = v !== 'price' || DS !== 'zip';
   document.getElementById('zipSrc').textContent = v === 'price' ? 'Zillow' : 'Census';
   if (!crime && v !== 'commute') measure = v === 'income' ? 'income' : v === 'price' ? (document.getElementById('mRent').getAttribute('aria-pressed') === 'true' ? 'rent' : 'value') : measure;
-  for (const id of LAYERS) for (const l of ['-fill', '-line', '-hover']) if (map.getLayer(id + l)) map.setLayoutProperty(id + l, 'visibility', race ? 'none' : 'visible');
+  for (const id of LAYERS) for (const l of ['-fill', '-hover']) if (map.getLayer(id + l)) map.setLayoutProperty(id + l, 'visibility', race ? 'none' : 'visible');
+  applyBorders();
   K.clear(); setHeader(); applyMeasure(); applyHatch();
   if (race) showDots(); else hideDots();
 }
@@ -921,7 +996,8 @@ function applyBase() {
   document.getElementById('opacRow').hidden = !on;
   if (map.getLayer('states-line')) map.setPaintProperty('states-line', 'line-color', DARK ? '#9aa1b0' : '#6f7686');
   for (const id of LAYERS) {
-    if (map.getLayer(id + '-fill')) map.setPaintProperty(id + '-fill', 'fill-opacity', colorOpacity());
+    if (map.getLayer(id + '-fill')) map.setPaintProperty(id + '-fill', 'fill-opacity', fillOpacity());
+    if (map.getLayer(id + '-line')) map.setPaintProperty(id + '-line', 'line-opacity', lineOpacity());
     if (map.getLayer(id + '-hatch')) map.setPaintProperty(id + '-hatch', 'fill-opacity', Math.min(1, colorOpacity() + 0.1));
     if (map.getLayer(id + '-hover')) map.setPaintProperty(id + '-hover', 'line-color', DARK ? '#ffffff' : '#1b1f27');
   }
