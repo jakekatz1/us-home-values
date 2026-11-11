@@ -141,9 +141,9 @@ details a { color: var(--ink); }
       <button type="button" id="mRent" aria-pressed="false">Monthly rent</button>
     </div>
     <div class="seg seg-sm seg3" role="group" aria-label="Areas" id="areaSeg">
-      <button type="button" id="dZip" aria-pressed="true">ZIP codes <small id="zipSrc">Zillow</small></button>
+      <button type="button" id="dBg" aria-pressed="true">Block groups <small>Census, finest</small></button>
       <button type="button" id="dTract" aria-pressed="false">Tracts <small>Census</small></button>
-      <button type="button" id="dBg" aria-pressed="false">Block groups <small>Census</small></button>
+      <button type="button" id="dZip" aria-pressed="false">ZIP codes <small id="zipSrc">Zillow</small></button>
     </div>
     <div id="raceLegend" class="race" hidden></div>
     <div class="big" id="bigRow"><span class="num" id="bigNum"></span><span class="what" id="bigWhat"></span></div>
@@ -167,6 +167,7 @@ details a { color: var(--ink); }
   <section>
     <details>
       <summary>What's new</summary>
+      <p><strong>v8</strong>, Nov 10, 2026: the color-strength slider also fades the roads drawn over the colors (stronger colors, fainter roads); race dots resized so each covers a fixed patch of ground: they no longer pile up, sparse areas look sparse and cities fill in, so the dots double as a population-density map. The map now opens on block groups with one national color scale, and the area buttons run from finest to coarsest.</p>
       <p><strong>v7</strong>, Nov 10, 2026: three views at the top: Home prices, Income (median household income) and Race (a dot map, one dot per 20 people up close); Census block groups as a third, finer set of areas; links to the building-age maps removed.</p>
       <p><strong>v6</strong>, Nov 9, 2026: light background map instead of dark, so colors stay bright and the map underneath reads; a Color strength slider sets how see-through the colors are.</p>
       <p><strong>v5</strong>, Nov 9, 2026: Census tracts as a second, finer set of areas (about 85,000, from the Census 2020–2024 survey); the background map shows through more (lighter color layer, brighter roads and water); the fitted or national color scale is chosen under the legend; the one-year change in hover is back.</p>
@@ -184,7 +185,7 @@ details a { color: var(--ink); }
       <p><strong>Block groups</strong> (the third area choice) are subdivisions of tracts, usually 600 to 3,000 people; values, rents and incomes come from the same Census tables as tracts, with wider margins of error. Zoomed out, tracts are shown.</p>
       <p><strong>Census tracts</strong> (the second area choice) show median home value (table B25077: owners' own estimates of what their home would sell for) and median gross rent (B25064), American Community Survey 2020–2024 5-year estimates, with 90% margins of error on hover, on 2022 cartographic tract boundaries (2020 tracts). They are a different source and time period from the Zillow ZIP figures and run lower. Census caps values at $2,000,000 and rents at $3,500.</p>
       <p><strong>Areas</strong> are the Census Bureau's 2020 ZIP Code Tabulation Areas, which approximate ZIP codes; PO-box-only ZIPs have no area. Zillow ZIPs are matched by their 5-digit code (7 Zillow value ZIPs and 4 rent ZIPs have no 2020 area and are left out). Grey areas have no estimate.</p>
-      <p><strong>Street map</strong> (this website version): OpenFreeMap's Liberty style, built from OpenStreetMap data (© OpenStreetMap contributors, OpenMapTiles). The colors sit on it see-through, below its roads and names. The text below describes the simpler background used when the map runs inside claude.ai.</p>
+      <p><strong>Street map</strong> (this website version): OpenFreeMap's Liberty style, built from OpenStreetMap data (© OpenStreetMap contributors, OpenMapTiles). The colors sit on it see-through, below its roads and names; the color-strength slider also fades the roads, so stronger colors mean fainter roads. The text below describes the simpler background used when the map runs inside claude.ai.</p>
       <p><strong>Background map</strong>: land is the Census Bureau's 2020 state boundaries (1:500,000, clipped to the shoreline); lakes and rivers are Natural Earth 1:10m (public domain); highways and major roads are Census TIGER roads (interstates, US and state highways, county roads), simplified. It shows major roads only, not every street. Town names are Zillow's city list placed with the Census 2024 Gazetteer.</p>
       <p>Data downloaded November 10, 2026: Zillow Research public data (files.zillowstatic.com), Census ACS summary file (www2.census.gov), 2020 cartographic boundaries and the 2024 Gazetteer of places. Zillow data © Zillow, used under its research data terms.</p>
     </details>
@@ -227,7 +228,7 @@ const gunzipJSON = url => fetch(url).then(r => { if (!r.ok) throw new Error(url 
   .then(ab => new Response(new Blob([ab]).stream().pipeThrough(new DecompressionStream('gzip'))).json());
 
 let ALL = null;              // numbers for the current areas (ZIPs or tracts) for the panel and the fitted scale: {features: [{properties, _c, _bb}]}
-let DS = 'zip', ZIPALL = null, TMETA = null; const DSDATA = {};
+let DS = '', ZIPALL = null, TMETA = null; const DSDATA = {};
 const DSC = {
   zip: { pts: 'pts.wasm', coarse: 'zips.wasm', dir: 's/', one: 'ZIP', many: 'ZIPs' },
   tract: { pts: 't/pts.wasm', coarse: 't/coarse.wasm', dir: 't/s/', one: 'tract', many: 'tracts' },
@@ -263,6 +264,8 @@ const LAYERS = [];
 let BASE = null; const roadStates = new Set();
 const baseOn = () => document.getElementById('tBase').checked;
 const colorOpacity = () => baseOn() ? +document.getElementById('opac').value / 100 : 0.92;
+// roads drawn over the colors fade as the color strength goes up (strong colors: faint roads; weak colors: full-strength roads)
+const roadOpacity = () => { const t = Math.max(0, (colorOpacity() - 0.15) / 0.85); return Math.max(0.1, 1 - 1.05 * t ** 0.8); };
 const BASE_LAYERS = ['land', 'lakes', 'rivers', 'roads0', 'roads3'];
 function addBase() {
   const v = baseOn() ? 'visible' : 'none';
@@ -282,7 +285,7 @@ function addBaseLayer(id) {
   else {
     const minz = id === 'roads0' ? 0 : id === 'roads3' ? 6 : 8.5, maxz = id === 'roads0' ? 6 : id === 'roads3' ? 24 : 24;
     map.addLayer({ id, source: id, type: 'line', minzoom: minz, maxzoom: maxz, layout: { ...vis, 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': ['match', ['get', 'c'], 1, ROADC[1], 2, ROADC[2], 3, ROADC[3], ROADC[4]], 'line-opacity': 0.92,
+      paint: { 'line-color': ['match', ['get', 'c'], 1, ROADC[1], 2, ROADC[2], 3, ROADC[3], ROADC[4]], 'line-opacity': 0.92 * roadOpacity(),
         'line-width': ROADW } }, 'base-over');
   }
   if (!BASE_LAYERS.includes(id)) BASE_LAYERS.push(id);
@@ -303,6 +306,7 @@ function applyBase() {
   if (map.getLayer('states-line')) map.setPaintProperty('states-line', 'line-color', on ? '#6f7686' : '#c7ccd6');
   for (const id of LAYERS) if (map.getLayer(id + '-hover')) map.setPaintProperty(id + '-hover', 'line-color', on ? '#1b1f27' : '#ffffff');
   for (const id of BASE_LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', v);
+  for (const id of BASE_LAYERS) if (map.getLayer(id) && id !== 'rivers' && map.getLayer(id).type === 'line') map.setPaintProperty(id, 'line-opacity', 0.92 * roadOpacity());
   map.setLayoutProperty('states-fill', 'visibility', on ? 'none' : 'visible');
   map.setPaintProperty('bg', 'background-color', on ? '#c9dcec' : '#11151d');
   for (const id of LAYERS) {
@@ -345,19 +349,18 @@ function hatchImage() {
 map.on('load', async () => {
   map.addImage('hatch', hatchImage());
   // everything at once: state outlines, the national ZIP shapes (parsed off the main thread) and the per-ZIP numbers
-  const [statesU, zipsU, pts, bmeta] = await Promise.all([blobURL('states.wasm'), blobURL('zips.wasm'), gunzipJSON('pts.wasm'), fetch('b/meta.json').then(r => r.json())]);
+  // block groups need ~15 MB of numbers, so the map opens on the tract colors (identical when zoomed out) and swaps in block groups when they arrive
+  GPRE = Promise.all([gunzipJSON(DSC.bg.pts), fetch('g/meta.json').then(r => r.json())]);
+  const [statesU, bmeta] = await Promise.all([blobURL('states.wasm'), fetch('b/meta.json').then(r => r.json())]);
   BASE = bmeta;
-  ALL = ZIPALL = DSDATA.zip = unpackPts('zip', pts); DSDATA.zipCoarse = zipsU;
-  for (const f of ALL.features) BYZ.set(f.properties.z, f.properties);
-  initPanel();
+  gunzipJSON('pts.wasm').then(p => { ZIPALL = DSDATA.zip = DSDATA.zip || unpackPts('zip', p); });   // for ZIP search
   map.addSource('states', { type: 'geojson', data: statesU });
   map.addLayer({ id: 'states-fill', type: 'fill', source: 'states', paint: { 'fill-color': '#181d28' } });
   map.addLayer({ id: 'states-line', type: 'line', source: 'states', paint: { 'line-color': '#c7ccd6', 'line-opacity': 0.6, 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.6, 8, 1.4] } });
   addWebBase(); applyBase();
-  addAreaLayers(zipsU);
-  applyMeasure();
-  map.once('idle', () => { document.getElementById('loading').hidden = true; });
-  syncCities(); loadFine();
+  await setDataset('tract', true);
+  syncCities();
+  if (DS === 'tract' && document.getElementById('dBg').getAttribute('aria-pressed') === 'true') await setDataset('bg');
 });
 
 // national shapes: everywhere below FINEZ; above it, only where a state's detailed shapes haven't arrived yet (no blank gap)
@@ -367,19 +370,23 @@ function addAreaLayers(coarseURL) {
   addZipLayers(DS + '-c', DS + '-h', FINEZ, null, ['!', ['in', ['get', 't'], ['literal', []]]]);
 }
 // switch between ZIP codes (Zillow) and Census tracts: drop the current areas' layers and sources, load the other set
-async function setDataset(ds) {
+let GPRE = null;
+async function setDataset(ds, interim) {
   if (ds === DS) return;
+  if (!interim) {
   document.getElementById('dZip').setAttribute('aria-pressed', String(ds === 'zip'));
   document.getElementById('dTract').setAttribute('aria-pressed', String(ds === 'tract'));
   document.getElementById('dBg').setAttribute('aria-pressed', String(ds === 'bg'));
+  }
   const ld = document.getElementById('loading'); ld.textContent = 'Loading ' + (ds === 'zip' ? 'ZIP codes' : ds === 'tract' ? 'Census tracts' : 'block groups') + '…'; ld.hidden = false;
-  if (!DSDATA[ds]) {
+  if (!DSDATA[ds] || !DSDATA[ds + 'Coarse']) {
     if (ds === 'bg' && !DSDATA.tract) {                     // block groups need the tract shapes and numbers for the zoomed-out view
       const [tp, tc, tm] = await Promise.all([gunzipJSON(DSC.tract.pts), blobURL(DSC.tract.coarse), fetch('t/meta.json').then(r => r.json())]);
       DSDATA.tract = unpackPts('tract', tp); DSDATA.tractCoarse = tc; TMETA = tm;
     }
-    const [pts, cu, meta] = await Promise.all([gunzipJSON(DSC[ds].pts), ds === 'bg' ? DSDATA.tractCoarse : blobURL(DSC[ds].coarse), ds !== 'zip' ? fetch(ds === 'bg' ? 'g/meta.json' : 't/meta.json').then(r => r.json()) : null]);
-    DSDATA[ds] = ds === 'bg' ? { features: DSDATA.tract.features.concat(unpackPts('bg', pts, 'g').features) } : unpackPts(ds, pts);
+    const gp = ds === 'bg' ? (GPRE || Promise.all([gunzipJSON(DSC.bg.pts), fetch('g/meta.json').then(r => r.json())])) : null;
+    const [pts, cu, meta] = await Promise.all([ds === 'bg' ? gp.then(a => a[0]) : DSDATA[ds] ? null : gunzipJSON(DSC[ds].pts), ds === 'bg' ? DSDATA.tractCoarse : blobURL(DSC[ds].coarse), ds === 'bg' ? gp.then(a => a[1]) : ds !== 'zip' ? fetch('t/meta.json').then(r => r.json()) : null]);
+    if (!DSDATA[ds]) DSDATA[ds] = ds === 'bg' ? { features: DSDATA.tract.features.concat(unpackPts('bg', pts, 'g').features) } : unpackPts(ds, pts);
     DSDATA[ds + 'Coarse'] = cu; if (meta) { if (ds === 'bg') GMETA = meta; else TMETA = meta; }
   }
   if (hoverZ) hoverZ = '';
@@ -419,7 +426,7 @@ map.on('moveend', () => { loadFine(); loadRoads(); syncCities(); if (ALL) applyM
 map.on('zoom', () => { if (map.getZoom() >= FINEZ - 0.8) loadFine(); });
 
 // ---- colour scale fitted to the view: 12 middle classes holding about equal numbers of the ZIPs in view, two extreme classes at each end
-let FIT = true; const fitOn = () => FIT;
+let FIT = false; const fitOn = () => FIT;
 document.getElementById('scaleBtn').onclick = () => { FIT = !FIT; applyMeasure(); };
 function inView() {
   const b = map.getBounds(), w = b.getWest(), e = b.getEast(), s = b.getSouth(), n = b.getNorth();
@@ -610,10 +617,12 @@ function renderDots() {
   // keep showing the coarser level until the finer tiles arrive
   let use = keys.filter(k => DOTS.has(k));
   if (!use.length) use = [...DOTS.keys()].filter(k => k === '0' || +k[0] < L).slice(0, 40);
-  const r = z < 5 ? 1.1 : z < 8 ? 1.2 + (z - 5) * 0.15 : Math.min(4, 1.3 + (z - 8) * 0.55);
-  const op = baseOn() ? +document.getElementById('opac').value / 100 : 0.95;
+  // each dot covers a fixed patch of ground (bigger for the levels where a dot stands for more people), never under ~1 px or over 3 px:
+  // sparse places stay sparse, cities fill in solid, and zooming in separates the dots instead of keeping them packed
+  const M = k => [100, 45, 20][+k[0]];
+  const op = Math.min(0.9, (baseOn() ? +document.getElementById('opac').value / 100 : 0.8) + 0.15);
   deckOverlay.setProps({ layers: use.map(k => { const d = DOTS.get(k); return new deck.ScatterplotLayer({ id: 'dots-' + k, data: { length: d.n, attributes: { getPosition: { value: d.pos, size: 2 }, getFillColor: { value: d.col, size: 4 } } },
-    radiusUnits: 'pixels', getRadius: r, radiusMinPixels: 0.6, stroked: false, opacity: Math.max(0.35, op), antialiasing: true, parameters: { depthTest: false }, updateTriggers: { getRadius: r } }); }) });
+    radiusUnits: 'meters', getRadius: M(k), radiusMinPixels: z < 5 ? 0.55 : 0.65, radiusMaxPixels: 2.4, stroked: false, opacity: Math.max(0.45, op), antialiasing: true, parameters: { depthTest: false }, updateTriggers: { getRadius: M(k) } }); }) });
 }
 function updateRaceLegend() {
   if (!RACE_META) return;
@@ -745,6 +754,19 @@ function addWebBase() {
   map.addLayer({ id: 'base-anchor', type: 'background', layout: { visibility: 'none' }, paint: { 'background-opacity': 0 } }, 'base-over');
   map.moveLayer('states-fill', STREET[1]);
   for (const b of ['building', 'building-3d']) if (map.getLayer(b)) map.moveLayer(b, 'base-anchor');   // buildings take the tint; roads, water and names stay on top
+  // the roads, rails and paths that draw over the colors: the strength slider fades them, keeping each layer's own opacity as the full value
+  const ids = map.getStyle().layers.map(l => l.id), i0 = ids.indexOf('base-over');
+  OVER = ids.slice(i0 + 1).filter(id => map.getLayer(id).type === 'line' && !/^(boundary|waterway|water|states)/.test(id))
+    .map(id => [id, map.getPaintProperty(id, 'line-opacity') ?? 1]);
+}
+let OVER = [];
+function scaleOp(o, ro) {          // multiply a layer's line-opacity (number, zoom stops or interpolate/step expression) by ro
+  const m = v => typeof v === 'number' ? v * ro : ro;
+  if (typeof o === 'number') return o * ro;
+  if (o && o.stops) return { ...o, stops: o.stops.map(([z, v]) => [z, m(v)]) };
+  if (Array.isArray(o) && o[0].startsWith('interpolate')) return o.map((v, i) => i >= 4 && i % 2 === 0 ? m(v) : v);
+  if (Array.isArray(o) && o[0] === 'step') return o.map((v, i) => i >= 2 && i % 2 === 0 ? m(v) : v);
+  return ro;
 }
 function loadRoads() {}
 function applyBase() {
@@ -755,6 +777,8 @@ function applyBase() {
     map.setLayoutProperty(id, 'visibility', v);
   }
   if (map.getLayer('states-fill')) map.setLayoutProperty('states-fill', 'visibility', on ? 'none' : 'visible');
+  const ro = roadOpacity();
+  for (const [id, o] of OVER) if (map.getLayer(id)) map.setPaintProperty(id, 'line-opacity', scaleOp(o, ro));
   document.getElementById('opacRow').hidden = !on;
   if (map.getLayer('states-line')) map.setPaintProperty('states-line', 'line-color', on ? '#6f7686' : '#c7ccd6');
   for (const id of LAYERS) {
