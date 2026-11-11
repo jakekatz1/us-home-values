@@ -73,6 +73,8 @@ h1 span { color: var(--apricot); }
 .linkbtn:focus-visible { outline: 2px solid var(--apricot); outline-offset: 2px; border-radius: 2px; }
 .scale-row { font-size: 12px; }
 .opac { display: grid; grid-template-columns: auto 1fr 3.2em; align-items: center; gap: 10px; font-size: 13px; padding-left: 40px; }
+.moderow { grid-template-columns: auto 1fr; }
+.moderow .seg button { padding: 5px 0; }
 .opac output { font: 400 11px var(--f-data); color: var(--muted); text-align: right; }
 .opac input[type=range] { accent-color: var(--apricot); width: 100%; min-width: 0; }
 .big { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -160,6 +162,7 @@ details a { color: var(--ink); }
   <section>
     <label class="tog"><input type="checkbox" id="tBase" checked> Background map</label>
     <div class="opac" id="opacRow"><label for="opac">Color strength</label><input type="range" id="opac" min="15" max="100" step="5" value="55"><output id="opacOut" for="opac">55%</output></div>
+    <div class="opac moderow"><span>Map style</span><div class="seg seg-sm" role="group" aria-label="Map style"><button type="button" id="mLight" aria-pressed="true">Light</button><button type="button" id="mDark" aria-pressed="false">Dark</button></div></div>
     <label class="tog" id="censusRow"><input type="checkbox" id="tCensus" checked> Census rent where Zillow has none <small id="nCensus"></small></label>
     <label class="tog"><input type="checkbox" id="tCity" checked> City names</label>
     <label class="tog"><input type="checkbox" id="tState" checked> State lines</label>
@@ -167,7 +170,7 @@ details a { color: var(--ink); }
   <section>
     <details>
       <summary>What's new</summary>
-      <p><strong>v8</strong>, Nov 10, 2026: zoom in four levels further (to street level); the color-strength slider also fades the roads drawn over the colors (stronger colors, fainter roads); race dots resized so each covers a fixed patch of ground: they no longer pile up, sparse areas look sparse and cities fill in, so the dots double as a population-density map. The map now opens on block groups with one national color scale, and the area buttons run from finest to coarsest.</p>
+      <p><strong>v8</strong>, Nov 10, 2026: a light / dark map style under the background-map switch (it works with the background map on or off); zoom in four levels further (to street level); the color-strength slider also fades the roads drawn over the colors (stronger colors, fainter roads); race dots resized so each covers a fixed patch of ground: they no longer pile up, sparse areas look sparse and cities fill in, so the dots double as a population-density map. The map now opens on block groups with one national color scale, and the area buttons run from finest to coarsest.</p>
       <p><strong>v7</strong>, Nov 10, 2026: three views at the top: Home prices, Income (median household income) and Race (a dot map, one dot per 20 people up close); Census block groups as a third, finer set of areas; links to the building-age maps removed.</p>
       <p><strong>v6</strong>, Nov 9, 2026: light background map instead of dark, so colors stay bright and the map underneath reads; a Color strength slider sets how see-through the colors are.</p>
       <p><strong>v5</strong>, Nov 9, 2026: Census tracts as a second, finer set of areas (about 85,000, from the Census 2020–2024 survey); the background map shows through more (lighter color layer, brighter roads and water); the fitted or national color scale is chosen under the legend; the one-year change in hover is back.</p>
@@ -263,6 +266,13 @@ const LAYERS = [];
 // ---- background map (open data, hosted with the page): land, lakes, rivers, roads. Colors sit on it as a see-through layer.
 let BASE = null; const roadStates = new Set();
 const baseOn = () => document.getElementById('tBase').checked;
+// light or dark map (background map and the plain backdrop); remembered in this browser
+let DARK = false; try { DARK = localStorage.getItem('usmap-mode') === 'dark'; } catch (e) {}
+function setMode(d) {
+  DARK = d; try { localStorage.setItem('usmap-mode', d ? 'dark' : 'light'); } catch (e) {}
+  document.getElementById('mLight').setAttribute('aria-pressed', String(!d)); document.getElementById('mDark').setAttribute('aria-pressed', String(d));
+  if (map.loaded() || map.getLayer('states-line')) applyBase();
+}
 const colorOpacity = () => baseOn() ? +document.getElementById('opac').value / 100 : 0.92;
 // roads drawn over the colors fade as the color strength goes up (strong colors: faint roads; weak colors: full-strength roads)
 const roadOpacity = () => { const t = Math.max(0, (colorOpacity() - 0.15) / 0.85); return Math.max(0.1, 1 - 1.05 * t ** 0.8); };
@@ -275,7 +285,8 @@ function addBase() {
   for (const [id, url] of [['land', 'b/land.wasm'], ['lakes', 'b/lakes.wasm'], ['rivers', 'b/rivers.wasm'], ['roads0', 'b/roads0.wasm'], ['roads3', 'b/roads3.wasm']])
     blobURL(url).then(u => { map.addSource(id, { type: 'geojson', data: u, tolerance: 0.4, maxzoom: id === 'roads0' ? 7 : 11 }); addBaseLayer(id); });
 }
-const ROADC = ['#000', '#8a7f72', '#9aa1ad', '#aeb4be', '#c3c8d0'];   // 1 interstate, 2 US highway, 3 state route, 4 other major road
+const ROADC = ['#000', '#8a7f72', '#9aa1ad', '#aeb4be', '#c3c8d0'], ROADC_D = ['#000', '#8a7556', '#5f6674', '#525865', '#474c57'];
+const roadColor = () => { const c = DARK ? ROADC_D : ROADC; return ['match', ['get', 'c'], 1, c[1], 2, c[2], 3, c[3], c[4]]; };   // 1 interstate, 2 US highway, 3 state route, 4 other major road
 const C_ = ['get', 'c'], ROADW = ['interpolate', ['exponential', 1.6], ['zoom'], 4, ['match', C_, 1, 0.7, 0.35], 8, ['match', C_, 1, 1.6, 0.9], 12, ['match', C_, 1, 4.4, 2, 3.2, 2.2]];
 function addBaseLayer(id) {
   const vis = { visibility: baseOn() ? 'visible' : 'none' };
@@ -285,7 +296,7 @@ function addBaseLayer(id) {
   else {
     const minz = id === 'roads0' ? 0 : id === 'roads3' ? 6 : 8.5, maxz = id === 'roads0' ? 6 : id === 'roads3' ? 24 : 24;
     map.addLayer({ id, source: id, type: 'line', minzoom: minz, maxzoom: maxz, layout: { ...vis, 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': ['match', ['get', 'c'], 1, ROADC[1], 2, ROADC[2], 3, ROADC[3], ROADC[4]], 'line-opacity': 0.92 * roadOpacity(),
+      paint: { 'line-color': roadColor(), 'line-opacity': 0.92 * roadOpacity(),
         'line-width': ROADW } }, 'base-over');
   }
   if (!BASE_LAYERS.includes(id)) BASE_LAYERS.push(id);
@@ -303,12 +314,16 @@ function loadRoads() {                                         // state and coun
 function applyBase() {
   const on = baseOn(), v = on ? 'visible' : 'none';
   document.getElementById('opacRow').hidden = !on;
-  if (map.getLayer('states-line')) map.setPaintProperty('states-line', 'line-color', on ? '#6f7686' : '#c7ccd6');
-  for (const id of LAYERS) if (map.getLayer(id + '-hover')) map.setPaintProperty(id + '-hover', 'line-color', on ? '#1b1f27' : '#ffffff');
+  if (map.getLayer('states-line')) map.setPaintProperty('states-line', 'line-color', DARK ? '#9aa1b0' : '#6f7686');
+  for (const id of LAYERS) if (map.getLayer(id + '-hover')) map.setPaintProperty(id + '-hover', 'line-color', DARK ? '#ffffff' : '#1b1f27');
+  const P = (id, k, v) => map.getLayer(id) && map.setPaintProperty(id, k, v);
+  P('land', 'fill-color', DARK ? '#1b2029' : '#f4f2ee'); P('lakes', 'fill-color', DARK ? '#13233a' : '#c9dcec'); P('rivers', 'line-color', DARK ? '#25486f' : '#9cc0dd');
+  P('states-fill', 'fill-color', DARK ? '#181d28' : '#ffffff');
+  for (const id of BASE_LAYERS) if (/^(roads|rd-)/.test(id)) P(id, 'line-color', roadColor());
   for (const id of BASE_LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', v);
   for (const id of BASE_LAYERS) if (map.getLayer(id) && id !== 'rivers' && map.getLayer(id).type === 'line') map.setPaintProperty(id, 'line-opacity', 0.92 * roadOpacity());
   map.setLayoutProperty('states-fill', 'visibility', on ? 'none' : 'visible');
-  map.setPaintProperty('bg', 'background-color', on ? '#c9dcec' : '#11151d');
+  map.setPaintProperty('bg', 'background-color', on ? (DARK ? '#0f1b2b' : '#c9dcec') : (DARK ? '#11151d' : '#e8ebf0'));
   for (const id of LAYERS) {
     if (map.getLayer(id + '-fill')) map.setPaintProperty(id + '-fill', 'fill-opacity', colorOpacity());
     if (map.getLayer(id + '-hatch')) map.setPaintProperty(id + '-hatch', 'fill-opacity', Math.min(1, colorOpacity() + 0.1));
@@ -579,6 +594,8 @@ document.getElementById('mValue').onclick = () => setMeasure('value');
 document.getElementById('mRent').onclick = () => setMeasure('rent');
 document.getElementById('tCensus').onchange = applyMeasure;
 document.getElementById('tBase').onchange = () => { applyBase(); };
+document.getElementById('mLight').onclick = () => setMode(false); document.getElementById('mDark').onclick = () => setMode(true);
+document.getElementById('mLight').setAttribute('aria-pressed', String(!DARK)); document.getElementById('mDark').setAttribute('aria-pressed', String(DARK));
 document.getElementById('opac').addEventListener('input', e => { document.getElementById('opacOut').textContent = e.target.value + '%'; applyBase(); if (VIEW === 'race') renderDots(); });
 document.getElementById('tState').onchange = e => map.getLayer('states-line') && map.setLayoutProperty('states-line', 'visibility', e.target.checked ? 'visible' : 'none');
 document.getElementById('tCity').onchange = syncCities;
@@ -759,7 +776,27 @@ function addWebBase() {
   OVER = ids.slice(i0 + 1).filter(id => map.getLayer(id).type === 'line' && !/^(boundary|waterway|water|states)/.test(id))
     .map(id => [id, map.getPaintProperty(id, 'line-opacity') ?? 1]);
 }
-let OVER = [];
+let OVER = [], ORIG = null;
+// dark version of the street map: recolor its layers by kind, keeping the light originals to switch back
+const PK = { background: ['background-color'], fill: ['fill-color'], line: ['line-color'], symbol: ['text-color', 'text-halo-color'], 'fill-extrusion': ['fill-extrusion-color'] };
+function darkPaint(id, type, k) {
+  if (type === 'background') return '#141821';
+  if (type === 'symbol') return k === 'text-color' ? '#c3c8d2' : '#0f131a';
+  if (type === 'fill-extrusion' || /building/.test(id)) return '#272c37';
+  if (type === 'fill') return /water/.test(id) ? '#15263c' : /park|wood|grass|forest|wetland|landcover|nature|pitch|golf|cemetery/.test(id) ? '#19221f' : /aeroway/.test(id) ? '#232733' : '#1a1e26';
+  if (/water|river/.test(id)) return '#24446c';
+  if (/casing/.test(id)) return '#0d1016';
+  if (/boundary/.test(id)) return '#6a7080';
+  if (/rail|transit/.test(id)) return '#3b404b';
+  if (/motorway|trunk/.test(id)) return '#7a6644';
+  if (/primary|secondary|tertiary/.test(id)) return '#525867';
+  return '#3d4350';
+}
+function paintMode() {
+  if (!ORIG) { ORIG = {}; for (const id of STREET) { const l = map.getLayer(id); if (!l) continue; for (const k of PK[l.type] || []) ORIG[id + '|' + k] = map.getPaintProperty(id, k); } }
+  for (const id of STREET) { const l = map.getLayer(id); if (!l || id === 'background') continue;
+    for (const k of PK[l.type] || []) { map.setPaintProperty(id, k, DARK ? darkPaint(id, l.type, k) : ORIG[id + '|' + k]); } }   // (an undefined original resets to the style default)
+}
 function scaleOp(o, ro) {          // multiply a layer's line-opacity (number, zoom stops or interpolate/step expression) by ro
   const m = v => typeof v === 'number' ? v * ro : ro;
   if (typeof o === 'number') return o * ro;
@@ -773,18 +810,19 @@ function applyBase() {
   const on = baseOn();
   for (const id of STREET) if (map.getLayer(id)) {
     const v = on && !(id.startsWith('label_') && !document.getElementById('tCity').checked) ? 'visible' : 'none';
-    if (id === 'background') { map.setPaintProperty(id, 'background-color', on ? '#f8f4f0' : '#11151d'); continue; }
+    if (id === 'background') { map.setPaintProperty(id, 'background-color', on ? (DARK ? '#141821' : '#f8f4f0') : (DARK ? '#11151d' : '#e8ebf0')); continue; }
     map.setLayoutProperty(id, 'visibility', v);
   }
-  if (map.getLayer('states-fill')) map.setLayoutProperty('states-fill', 'visibility', on ? 'none' : 'visible');
+  if (map.getLayer('states-fill')) { map.setLayoutProperty('states-fill', 'visibility', on ? 'none' : 'visible'); map.setPaintProperty('states-fill', 'fill-color', DARK ? '#181d28' : '#ffffff'); }
+  if (on || ORIG) paintMode();
   const ro = roadOpacity();
   for (const [id, o] of OVER) if (map.getLayer(id)) map.setPaintProperty(id, 'line-opacity', scaleOp(o, ro));
   document.getElementById('opacRow').hidden = !on;
-  if (map.getLayer('states-line')) map.setPaintProperty('states-line', 'line-color', on ? '#6f7686' : '#c7ccd6');
+  if (map.getLayer('states-line')) map.setPaintProperty('states-line', 'line-color', DARK ? '#9aa1b0' : '#6f7686');
   for (const id of LAYERS) {
     if (map.getLayer(id + '-fill')) map.setPaintProperty(id + '-fill', 'fill-opacity', colorOpacity());
     if (map.getLayer(id + '-hatch')) map.setPaintProperty(id + '-hatch', 'fill-opacity', Math.min(1, colorOpacity() + 0.1));
-    if (map.getLayer(id + '-hover')) map.setPaintProperty(id + '-hover', 'line-color', on ? '#1b1f27' : '#ffffff');
+    if (map.getLayer(id + '-hover')) map.setPaintProperty(id + '-hover', 'line-color', DARK ? '#ffffff' : '#1b1f27');
   }
   syncCities();
 }
