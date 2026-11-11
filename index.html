@@ -265,7 +265,7 @@ let GMETA = null, CMETA = null, PREVDS = 'bg';
 const unpackPts = (ds, pts, lv) => ({ features: pts.map(row => {
   if (ds === 'crime') { const [z, x, y, vr, pr, kind, name, s, bb, pop, n, ag, months] = row;
     return { properties: Object.assign({ z, name, s, t: s, kind, pop, n, ag, months }, vr != null && { vr }, pr != null && { pr }), _c: [x, y], _bb: [[bb[0], bb[1]], [bb[2], bb[3]]] }; }
-  const [w, cda, ccp, ctr, cwb, cwh, cot] = row.slice(15), cm = cda != null && { w, cda, ccp, ctr, cwb, cwh, cot };
+  const [w, cda, ccp, ctr, cwb, cwh, cot0] = row.slice(15), cot = cot0 ?? (cda != null ? Math.max(0, 100 - cda - ccp - ctr - cwb - cwh) : null), cm = cda != null && { w, cda, ccp, ctr, cwb, cwh, cot };
   if (ds === 'zip') { const [z, x, y, v, r, rs, c, s, bb, t, vc, rm, rt, i, im] = row;
     return { properties: Object.assign({ z, c, s, t }, v != null && { v }, r != null && { r, rs }, vc != null && { vc }, rm != null && { rm }, rt && { rt }, i != null && { i, im }, cm), _c: [x, y], _bb: [[bb[0], bb[1]], [bb[2], bb[3]]] }; }
   const [z, x, y, v, r, rs, name, s, bb, t, county, vm, rm, i, im] = row;
