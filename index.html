@@ -167,7 +167,7 @@ details a { color: var(--ink); }
   <section>
     <details>
       <summary>What's new</summary>
-      <p><strong>v8</strong>, Nov 10, 2026: the color-strength slider also fades the roads drawn over the colors (stronger colors, fainter roads); race dots resized so each covers a fixed patch of ground: they no longer pile up, sparse areas look sparse and cities fill in, so the dots double as a population-density map. The map now opens on block groups with one national color scale, and the area buttons run from finest to coarsest.</p>
+      <p><strong>v8</strong>, Nov 10, 2026: zoom in four levels further (to street level); the color-strength slider also fades the roads drawn over the colors (stronger colors, fainter roads); race dots resized so each covers a fixed patch of ground: they no longer pile up, sparse areas look sparse and cities fill in, so the dots double as a population-density map. The map now opens on block groups with one national color scale, and the area buttons run from finest to coarsest.</p>
       <p><strong>v7</strong>, Nov 10, 2026: three views at the top: Home prices, Income (median household income) and Race (a dot map, one dot per 20 people up close); Census block groups as a third, finer set of areas; links to the building-age maps removed.</p>
       <p><strong>v6</strong>, Nov 9, 2026: light background map instead of dark, so colors stay bright and the map underneath reads; a Color strength slider sets how see-through the colors are.</p>
       <p><strong>v5</strong>, Nov 9, 2026: Census tracts as a second, finer set of areas (about 85,000, from the Census 2020–2024 survey); the background map shows through more (lighter color layer, brighter roads and water); the fitted or national color scale is chosen under the legend; the one-year change in hover is back.</p>
@@ -217,7 +217,7 @@ const colorExpr = m => { const M = MEASURES[m]; const e = ['step', ['get', M.pro
 const rentFilter = () => document.getElementById('tCensus').checked ? null : ['==', ['get', 'rs'], 'z'];
 
 const map = new maplibregl.Map({
-  container: 'map', attributionControl: false, dragRotate: false, pitchWithRotate: false, minZoom: 2.5, maxZoom: 13,
+  container: 'map', attributionControl: false, dragRotate: false, pitchWithRotate: false, minZoom: 2.5, maxZoom: 17,
   bounds: [[-125, 24.3], [-66.5, 49.5]], fitBoundsOptions: { padding: { left: innerWidth > 720 ? 390 : 20, right: 20, top: 20, bottom: innerWidth > 720 ? 20 : innerHeight * 0.46 } },
   style: 'https://tiles.openfreemap.org/styles/liberty'
 });
@@ -622,7 +622,7 @@ function renderDots() {
   const M = k => [100, 45, 20][+k[0]];
   const op = Math.min(0.9, (baseOn() ? +document.getElementById('opac').value / 100 : 0.8) + 0.15);
   deckOverlay.setProps({ layers: use.map(k => { const d = DOTS.get(k); return new deck.ScatterplotLayer({ id: 'dots-' + k, data: { length: d.n, attributes: { getPosition: { value: d.pos, size: 2 }, getFillColor: { value: d.col, size: 4 } } },
-    radiusUnits: 'meters', getRadius: M(k), radiusMinPixels: z < 5 ? 0.55 : 0.65, radiusMaxPixels: 2.4, stroked: false, opacity: Math.max(0.45, op), antialiasing: true, parameters: { depthTest: false }, updateTriggers: { getRadius: M(k) } }); }) });
+    radiusUnits: 'meters', getRadius: M(k), radiusMinPixels: z < 5 ? 0.55 : 0.65, radiusMaxPixels: z > 13 ? Math.min(5, 2.4 + (z - 13) * 0.7) : 2.4, stroked: false, opacity: Math.max(0.45, op), antialiasing: true, parameters: { depthTest: false }, updateTriggers: { getRadius: M(k) } }); }) });
 }
 function updateRaceLegend() {
   if (!RACE_META) return;
