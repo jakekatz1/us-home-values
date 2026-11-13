@@ -1,0 +1,620 @@
+/*
+  Styles for the US map page.
+  Layout: the map fills the window; a floating panel on the left (a bottom sheet on phones) holds the view tabs,
+  the legend (a histogram of the areas in view), the search box and the display switches.
+*/
+
+/* ==================== Colors and fonts ==================== */
+:root {
+  color-scheme: dark;
+  --ground: #11151d;
+  --land: #181d28;
+  --panel: rgba(22, 27, 37, 0.94);
+  --ink: #ebe7dd;
+  --muted: #959aa6;
+  --rule: #2c3343;
+  --apricot: #f4a340;
+  --nodata: #2a3040;
+  --f-display: 'League Spartan', 'Futura', 'Century Gothic', system-ui, sans-serif;
+  --f-body: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-data: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+/* ==================== Page and map ==================== */
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--f-body);
+  overflow: hidden;
+}
+#map {
+  position: absolute;
+  inset: 0;
+}
+.maplibregl-ctrl-attrib {
+  background: rgba(17, 21, 29, 0.7) !important;
+  font-size: 10px;
+}
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib-inner,
+.maplibregl-ctrl-attrib a {
+  color: var(--ink) !important;
+}
+.maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+  opacity: 0.85;
+}
+.maplibregl-ctrl-group {
+  background: var(--panel);
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--rule);
+}
+.maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(0.9);
+}
+[hidden] {
+  display: none !important;
+}
+
+/* ==================== Side panel (a bottom sheet on phones) ==================== */
+.panel {
+  position: absolute;
+  z-index: 2;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+  width: 360px;
+  max-height: calc(100% - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+.panel > section {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.panel > section + section {
+  border-top: 1px solid var(--rule);
+}
+.eyebrow {
+  font: 500 11px/1.3 var(--f-data);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 {
+  margin: 0;
+  font: 800 34px/0.95 var(--f-display);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+h1 span {
+  color: var(--apricot);
+}
+.lede {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.lede strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ==================== View tabs (Prices, Income, ...) ==================== */
+.views {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid var(--rule);
+}
+.views button {
+  all: unset;
+  text-align: center;
+  font: 600 11.5px/1 var(--f-body);
+  color: var(--muted);
+  padding: 10px 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.views button:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.05);
+}
+.views button[aria-pressed='true'] {
+  background: var(--apricot);
+  color: var(--ground);
+}
+.views button:focus-visible {
+  outline: 2px solid var(--apricot);
+  outline-offset: 2px;
+}
+
+/* ==================== Segmented buttons ==================== */
+.seg.seg3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.seg.seg5 {
+  grid-template-columns: repeat(5, 1fr);
+  border-radius: 14px;
+}
+.seg.seg5 button {
+  font-size: 11px;
+  padding: 7px 1px;
+  line-height: 1.15;
+  border-radius: 11px;
+}
+.seg.seg3 button {
+  font-size: 11.5px;
+  padding: 6px 0;
+}
+.seg3 small {
+  display: block;
+  margin: 2px 0 0;
+}
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 3px;
+}
+.seg button {
+  all: unset;
+  text-align: center;
+  font: 600 13px/1 var(--f-body);
+  color: var(--muted);
+  padding: 9px 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.seg button[aria-pressed='true'] {
+  background: var(--apricot);
+  color: var(--ground);
+}
+.seg button:focus-visible {
+  outline: 2px solid var(--apricot);
+  outline-offset: 2px;
+}
+.seg-sm button {
+  font-size: 12px;
+  padding: 7px 0;
+}
+.seg-sm small {
+  font: 400 10.5px var(--f-data);
+  opacity: 0.75;
+  margin-left: 3px;
+}
+
+/* ==================== Small text, notes and link buttons ==================== */
+.linkbtn {
+  all: unset;
+  cursor: pointer;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 12px;
+}
+.linkbtn:focus-visible {
+  outline: 2px solid var(--apricot);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.scale-row {
+  font-size: 12px;
+}
+.note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.note b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sw {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  vertical-align: -1px;
+  border-radius: 2px;
+  margin-right: 6px;
+  background: repeating-linear-gradient(135deg, #d8576b 0 2px, transparent 2px 5px);
+  border: 1px solid #555d70;
+}
+.msg {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 1em;
+  margin: 0;
+}
+
+/* ==================== Legend: big number and histogram ==================== */
+.big {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.big .num {
+  font: 700 32px/1 var(--f-display);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.big .what {
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.35;
+}
+.hist svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.hist text {
+  font: 400 9.5px var(--f-data);
+  fill: var(--muted);
+}
+
+/* ==================== Highlight range (two-handle slider) ==================== */
+/* two-handle range: highlight the areas between the handles, fade the rest */
+.dual {
+  position: relative;
+  height: 20px;
+  margin: 2px 0 0;
+}
+.dual::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  top: 9px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--rule);
+}
+.dual .fill {
+  position: absolute;
+  top: 9px;
+  height: 2px;
+  background: var(--apricot);
+}
+.dual input {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.dual input::-webkit-slider-runnable-track {
+  background: none;
+  height: 16px;
+}
+.dual input::-moz-range-track {
+  background: none;
+}
+.dual input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--apricot);
+  box-sizing: border-box;
+  cursor: ew-resize;
+}
+.dual input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--apricot);
+  box-sizing: border-box;
+  cursor: ew-resize;
+}
+.dual input:focus-visible {
+  outline: none;
+}
+.dual input:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--apricot);
+  outline-offset: 2px;
+}
+.rngtxt {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+  font: 400 11.5px var(--f-data);
+  color: var(--muted);
+  margin-top: 2px;
+}
+.rngtxt b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ==================== Race legend ==================== */
+.race {
+  display: grid;
+  gap: 6px;
+}
+.race .r {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.race .r i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.race .r b {
+  font: 500 12px var(--f-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.race .r small {
+  font: 400 11px var(--f-data);
+  color: var(--muted);
+  width: 3.4em;
+  text-align: right;
+}
+.race .bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+/* ==================== Search ==================== */
+.search {
+  display: flex;
+  gap: 6px;
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  font: 14px var(--f-body);
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 9px 10px;
+}
+.search button {
+  font: 600 13px var(--f-body);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 8px 13px;
+  cursor: pointer;
+}
+.search button:hover {
+  border-color: var(--muted);
+}
+
+/* ==================== On/off switches ==================== */
+.tog {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.tog input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 30px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--rule);
+  position: relative;
+  cursor: pointer;
+  flex: none;
+  margin: 0;
+  transition: background 0.15s;
+}
+.tog input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #c9ccd3;
+  transition: transform 0.15s;
+}
+.tog input:checked {
+  background: var(--apricot);
+}
+.tog input:checked::after {
+  transform: translateX(12px);
+  background: #fff;
+}
+.tog input:focus-visible {
+  outline: 2px solid var(--apricot);
+  outline-offset: 2px;
+}
+.tog small {
+  margin-left: auto;
+  font: 400 11px var(--f-data);
+  color: var(--muted);
+}
+
+/* ==================== Color strength and map style rows ==================== */
+.opac {
+  display: grid;
+  grid-template-columns: auto 1fr 3.2em;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding-left: 40px;
+}
+.moderow {
+  grid-template-columns: auto 1fr;
+}
+.moderow .seg button {
+  padding: 5px 0;
+}
+.opac output {
+  font: 400 11px var(--f-data);
+  color: var(--muted);
+  text-align: right;
+}
+.opac input[type='range'] {
+  accent-color: var(--apricot);
+  width: 100%;
+  min-width: 0;
+}
+
+/* ==================== Collapsible sections ==================== */
+details {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+details summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 13px;
+}
+details p {
+  margin: 8px 0 0;
+}
+details.adv {
+  margin-top: 2px;
+}
+details.adv .tog {
+  margin-top: 10px;
+  color: var(--ink);
+}
+details strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+details a {
+  color: var(--ink);
+}
+
+/* ==================== Hover tooltip, city labels, loading badge ==================== */
+.tip {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  background: rgba(13, 16, 23, 0.96);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  max-width: 300px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  display: none;
+}
+.tip .z {
+  font: 500 11px var(--f-data);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.tip .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 6px;
+}
+.tip .row b {
+  font: 700 17px/1.1 var(--f-display);
+  font-variant-numeric: tabular-nums;
+}
+.tip .src {
+  font-size: 11px;
+  color: var(--muted);
+}
+.tip .chg.up {
+  color: #f39a7a;
+}
+.tip .chg.down {
+  color: #8fc8e8;
+}
+.citylab {
+  font: 600 12px/1.1 var(--f-body);
+  color: #d7dbe4;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow:
+    0 0 3px #000,
+    0 0 6px #000,
+    0 0 10px rgba(0, 0, 0, 0.8);
+}
+.citylab.b {
+  font-size: 13.5px;
+}
+.loading {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  font-size: 12.5px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 7px 14px;
+}
+
+/* ==================== Small screens and reduced motion ==================== */
+@media (max-width: 720px) {
+  .panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: auto;
+    max-height: 46%;
+    border-radius: 12px 12px 0 0;
+  }
+  h1 {
+    font-size: 28px;
+  }
+  .tip {
+    max-width: 240px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
